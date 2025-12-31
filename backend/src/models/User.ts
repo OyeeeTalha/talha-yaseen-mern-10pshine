@@ -20,9 +20,6 @@ const userSchema = new Schema(
       required: true,
       trim: true,
     },
-    refreshToken: {
-      type: String,
-    },
     isDeleted: {
       type: Boolean,
       default: false,

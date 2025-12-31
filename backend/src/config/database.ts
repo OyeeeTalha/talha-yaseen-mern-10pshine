@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const MONGO_URI = process.env.DB_URI;
 
+if (!MONGO_URI) {
+  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
+}
+
 export const connectDB = async () => {
     try {
         await mongoose.connect(MONGO_URI);
@@ -11,3 +15,4 @@ export const connectDB = async () => {
         process.exit(1);
     }
 };
+
