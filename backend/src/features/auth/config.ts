@@ -9,15 +9,23 @@ export const authConfig = {
   adapter: {
     ...myAdapter,
     async createUser(user: any) {
-      const customUser = {
-        ...user,
-        isDeleted: false,        
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      try {
+        const customUser = {
+          ...user,
+          isDeleted: false,        
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
 
-      // 4. Call the original adapter to actually save it to DB
-      return myAdapter.createUser(customUser);
+        // 4. Call the original adapter to actually save it to DB
+        if (!myAdapter.createUser) {
+          throw new Error("createUser method not available in adapter");
+        }
+        return await myAdapter.createUser(customUser);
+      } catch (error) {
+        console.error("Error creating user:", error);
+        throw error;
+      }
     },
   },
   
