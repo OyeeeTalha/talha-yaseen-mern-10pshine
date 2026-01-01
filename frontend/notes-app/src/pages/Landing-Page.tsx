@@ -1,4 +1,5 @@
 import Navbar from "@/components/layouts/Navbar";
+import { Button } from "@/components/ui/button";
 import { ZapIcon, CloudSyncIcon, PenOffIcon, ListTreeIcon, NotebookPenIcon } from "lucide-react";
 function LandingPage() {
     return(
@@ -7,50 +8,45 @@ function LandingPage() {
         <Navbar/>
         <main className="flex-grow flex flex-col items-center w-full">
             {/* <!-- Hero Section --> */}
-            <section className="w-full px-6 py-12 md:py-24 lg:px-20 max-w-[1200px]">
-            <div className="flex flex-col items-center text-center gap-8">
-            <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <span className="flex h-2 w-2 rounded-full bg-primary mr-2"></span>
-                                    New: AI-Powered Summaries
-                                </div>
-            <h1 className="text-5xl md:text-7xl font-black leading-tight tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-slate-200 dark:to-slate-400 max-w-4xl">
-                                    Think clearer. <br/> Write better.
-                                </h1>
-            <h2 className="text-lg md:text-xl font-normal leading-relaxed text-slate-500 dark:text-slate-400 max-w-2xl">
-                                    Your second brain, reimagined. Capture thoughts, organize projects, and master your workflow with a tool designed for focus.
-                                </h2>
-            <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full justify-center">
-            <button className="flex h-12 items-center justify-center rounded-lg bg-primary px-8 text-base font-bold text-white shadow-xl shadow-primary/25 hover:scale-105 transition-transform">
-                                        Get Started for Free
-                                    </button>
-            <button className="flex h-12 items-center justify-center rounded-lg border border-slate-200 dark:border-border-dark bg-white dark:bg-surface-dark px-8 text-base font-medium text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                        View Demo
-                                    </button>
-            </div>
-            {/* <!-- Hero Image --> */}
-            <div className="relative mt-12 w-full max-w-5xl group">
-            {/* <!-- Abstract Glow --> */}
-            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary to-purple-600 opacity-20 blur-2xl transition duration-1000 group-hover:opacity-40 group-hover:duration-200"></div>
-            <div className="relative rounded-xl border border-slate-200 dark:border-border-dark bg-slate-100 dark:bg-surface-dark overflow-hidden shadow-2xl aspect-[16/9] flex items-center justify-center">
-            {/* <!-- Using a placeholder for a clean UI dashboard screenshot --> */}
-            <div className="w-full h-full bg-cover bg-center" data-alt="Screenshot of a minimalist dark mode note-taking application interface with a sidebar and main editor" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCbHlOevxdB1xW09m1zW2Sj1yMD3ui0zB78tmKFO6OCjc4rDsomA5KUXIDURgak5T6nc_ZwGOQOShWjfQMbLxEUmvUxvXnlewEPQK39gCK2ZUYHYmgKnbDUTOnJ2SiiSR0vgwMxg23D6B2gmIruOOKPn7ZysRyiDURRs9kYu3MldXbiWOqn4bfrjWt6F_uhfRb-SpNVfPeiAH_0Mk-HvMBRoxg3_hWOqi8wAIbhbtJQohe67K2yS9YjglD-lvaPwbCvmbDquV0gSvV_")'}}>
-            <div className="absolute inset-0 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent opacity-20"></div>
-            </div>
-            </div>
-            </div>
-            {/* <!-- Social Proof --> */}
-            <div className="mt-12 flex flex-col items-center gap-4 opacity-60">
-            <p className="text-sm font-medium text-slate-500">Trusted by thinkers at</p>
-            <div className="flex flex-wrap justify-center gap-8 md:gap-12 grayscale">
-            {/* <!-- Placeholder Logos --> */}
-            <span className="text-xl font-bold font-serif text-slate-500">ACME Corp</span>
-            <span className="text-xl font-bold font-sans text-slate-500">GlobalTech</span>
-            <span className="text-xl font-bold font-mono text-slate-500">UniVeritas</span>
-            <span className="text-xl font-bold tracking-widest text-slate-500">NEXUS</span>
-            </div>
-            </div>
-            </div>
-            </section>
+            <section className="w-full relative overflow-hidden pt-12 pb-20 lg:pt-24 lg:pb-32 px-6 lg:pl-20 lg:pr-0 max-w-[1800px]">
+<div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+<div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px]"></div>
+<div className="absolute top-[20%] right-[0%] w-[50%] h-[50%] rounded-full bg-purple-500/10 blur-[100px]"></div>
+</div>
+<div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-0 items-center">
+<div className="flex flex-col items-start gap-8 pr-6 lg:pr-12">
+<div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-2">
+<span className="mr-2">✨</span> Just shipped v2.0
+                <span className="material-symbols-outlined text-xs ml-1">chevron_right</span>
+</div>
+<h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.05]">
+                Capture ideas <br className="hidden lg:block"/>
+<span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">at the speed of thought.</span>
+</h1>
+<p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                The note-taking app designed for modern students and professionals. Organize your projects, collaborate in real-time, and never lose a brilliant idea again.
+            </p>
+<div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-2">
+<Button className="flex h-12 items-center justify-center rounded-lg bg-primary px-8 text-base font-semibold text-white shadow-lg shadow-primary/25 hover:bg-primary-hover transition-all">
+                    Get started
+                </Button>
+</div>
+<div className="pt-6 border-t border-slate-200/50 dark:border-white/10 w-full max-w-md mt-4">
+<p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">TRUSTED BY TEAMS AT</p>
+<div className="flex gap-6 opacity-60 grayscale items-center">
+<span className="text-base font-bold font-serif text-slate-600 dark:text-slate-400">ACME</span>
+<span className="text-base font-bold font-sans text-slate-600 dark:text-slate-400">GlobalTech</span>
+<span className="text-base font-bold font-mono text-slate-600 dark:text-slate-400">NEXUS</span>
+</div>
+</div>
+</div>
+<div className="relative w-full h-[700px] flex items-center justify-end overflow-visible">
+<div className="absolute right-[-100px] lg:right-[-20%] w-[120%] h-full rounded-l-xl border border-r-0 border-slate-200 dark:border-border-dark bg-white dark:bg-[#111827] shadow-2xl overflow-hidden">
+<img className="absolute w-full h-[700px] object-cover object-left" src="../../public/images/Screen_notes.png" />
+</div>
+</div>
+</div>
+</section>
             {/* <!-- Features Bento Grid --> */}
             <section className="w-full px-6 py-20 lg:px-20 bg-slate-50 dark:bg-[#0d1218]">
             <div className="max-w-[1200px] mx-auto flex flex-col gap-12">
@@ -202,3 +198,6 @@ function LandingPage() {
     }
 
     export default LandingPage;
+
+
+    
