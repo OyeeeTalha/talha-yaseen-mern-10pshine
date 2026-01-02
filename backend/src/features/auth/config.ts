@@ -1,11 +1,12 @@
 import Google from "@auth/express/providers/google";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "./db.js"; 
+import { AppError } from "../../shared/errors/AppError.js";
+import logger from "../../shared/utils/logger.js";
 
 const myAdapter = MongoDBAdapter(clientPromise);
 
 export const authConfig = {
-
   adapter: {
     ...myAdapter,
     async createUser(user: any) {
@@ -17,14 +18,13 @@ export const authConfig = {
           updatedAt: new Date(),
         };
 
-        // 4. Call the original adapter to actually save it to DB
         if (!myAdapter.createUser) {
-          throw new Error("createUser method not available in adapter");
+          throw new AppError("createUser method not available in adapter", 500);
         }
         return await myAdapter.createUser(customUser);
-      } catch (error) {
-        console.error("Error creating user:", error);
-        throw error;
+      } catch (error: any) {
+        logger.error(error);
+        throw new AppError(error.message, 500);
       }
     },
   },
@@ -46,7 +46,6 @@ export const authConfig = {
     async session({ session, user }: any) {
       if (session.user) {
         session.user.id = user.id; 
-        // You can now access your custom fields here too!
         session.user.role = user.role; 
       }
       return session;
