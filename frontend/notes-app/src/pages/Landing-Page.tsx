@@ -57,7 +57,7 @@ function LandingPage() {
               <div className="absolute right-[-100px] lg:right-[-20%] w-[120%] h-full rounded-l-xl border border-r-0 border-slate-200 dark:border-border-dark bg-white dark:bg-[#111827] shadow-2xl overflow-hidden">
                 <img
                   className="absolute w-full h-[700px] object-cover object-left"
-                  src="../../public/images/Screen_notes.png"
+                  src="/images/Screen_notes.png"
                 />
               </div>
             </div>
