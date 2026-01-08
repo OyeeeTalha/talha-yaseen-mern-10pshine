@@ -119,7 +119,7 @@ function ComplexFooter() {
 
 function SimpleFooter() {
   return (
-    <footer className="border-t border-slate-200 dark:border-border-dark bg-background-light dark:bg-background-dark px-6 py-12 lg:px-20">
+    <footer className="absolute bottom-6 w-full text-center pt-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">
       <div className="text-center text-sm text-slate-500">
         © 2026 NotesApp Inc. All rights reserved.
       </div>
