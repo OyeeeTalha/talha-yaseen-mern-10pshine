@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -10,7 +10,7 @@
 
   --color-background-light: #f6f7f8;
   --color-background-dark: #101922;
-  --color-surface-dark: #19232d;
+  /* --color-surface-dark: #19232d; */
   --color-border-dark: #233648;
 
   --radius-sm: 0.125rem;
@@ -24,7 +24,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --bg-card-dark: var(--card-dark);
+  --color-card-dark: var(--card-dark);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
@@ -53,6 +53,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-text-secondary: var(--text-secondary);
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-hover: var(--surface-hover);
 }
 
 :root {
@@ -88,13 +91,16 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --text-secondary: #92adc9;
+  --surface-dark: #1c2630;
+  --surface-hover: #25303b;
 }
 
 .dark {
   --background: #101922;
   --foreground: oklch(0.985 0 0);
   --card: #19232d;
-  --card-dark: "#18222c"
+  --card-dark: #18222c;
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
@@ -133,7 +139,6 @@
   }
 
   body {
- 
     background-color: var(--color-background-light);
 
     color: #0f172a;
