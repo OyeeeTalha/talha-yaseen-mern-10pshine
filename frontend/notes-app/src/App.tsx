@@ -1,13 +1,10 @@
 import "./App.css";
-
-import LandingPage from "./pages/Landing-Page";
-// import SignInPage from "./pages/SignIn-Page";
+import AppRoutes from "./routes/AppRoutes";
 
 function App() {
   return (
     <main>
-      <LandingPage />
-      {/* <SignInPage /> */}
+      <AppRoutes />
     </main>
   );
 }
