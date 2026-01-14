@@ -9,6 +9,7 @@ import LocalOfferRoundedIcon from "@mui/icons-material/LocalOfferRounded";
 import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import { Button } from "@/components/ui/button";
 
 function Editor() {
   const [title, setTitle] = useState("Untitled Note");
@@ -72,16 +73,16 @@ function Editor() {
         {/* Top Bar for specific note actions */}
         <header className="h-16 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0 bg-[#0d1117]">
           <div className="flex items-center gap-4">
-            <button className="text-gray-400 hover:text-white transition-colors">
+            <Button className="text-gray-400 hover:text-white transition-colors">
               <ArrowBackRoundedIcon />
-            </button>
+            </Button>
             <span className="text-sm text-gray-500">Last edited just now</span>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-full text-sm font-medium transition-all">
+            <Button className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-full text-sm font-medium transition-all">
               <SaveRoundedIcon sx={{ fontSize: 18 }} />
               <span>Save</span>
-            </button>
+            </Button>
           </div>
         </header>
 
