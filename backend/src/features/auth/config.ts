@@ -1,23 +1,21 @@
 import Google from "@auth/express/providers/google";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import clientPromise from "./db.js"; 
+import clientPromise from "./db.js";
 
 const myAdapter = MongoDBAdapter(clientPromise);
 
 export const authConfig = {
-
   adapter: {
     ...myAdapter,
     async createUser(user: any) {
       try {
         const customUser = {
           ...user,
-          isDeleted: false,        
+          isDeleted: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
 
-        // 4. Call the original adapter to actually save it to DB
         if (!myAdapter.createUser) {
           throw new Error("createUser method not available in adapter");
         }
@@ -28,7 +26,7 @@ export const authConfig = {
       }
     },
   },
-  
+
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
@@ -45,11 +43,23 @@ export const authConfig = {
   callbacks: {
     async session({ session, user }: any) {
       if (session.user) {
-        session.user.id = user.id; 
-        // You can now access your custom fields here too!
-        session.user.role = user.role; 
+        session.user.id = user.id;
+        session.user.role = user.role;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      const frontendUrl = process.env.FRONTEND_URL;
+
+      if (frontendUrl && url.startsWith(frontendUrl)) {
+        return url;
+      }
+
+      if (url.startsWith("/")) return new URL(url, baseUrl).toString();
+
+      if (new URL(url).origin === baseUrl) return url;
+
+      return baseUrl;
     },
   },
 };
