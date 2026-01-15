@@ -18,14 +18,14 @@ function LoadingSpinner() {
                 cy="37.1953"
                 r="28"
                 stroke="#E5E7EB"
-                stroke-width="8"
+                strokeWidth="8"
               />
               <path
                 id="Ellipse 716"
                 d="M49.8079 62.5848C53.142 61.0342 56.138 58.842 58.6248 56.1335C61.1117 53.425 63.0407 50.2532 64.3018 46.7992C65.5629 43.3452 66.1313 39.6767 65.9745 36.003C65.8178 32.3293 64.939 28.7225 63.3884 25.3884C61.8378 22.0544 59.6456 19.0584 56.9371 16.5715C54.2286 14.0847 51.0568 12.1556 47.6028 10.8946C44.1488 9.63351 40.4802 9.06511 36.8066 9.22183C33.1329 9.37855 29.5261 10.2573 26.192 11.808"
                 stroke="url(#paint0_linear_13416_7443)"
-                stroke-width="8"
-                stroke-linecap="round"
+                strokeWidth="8"
+                strokeLinecap="round"
               />
             </g>
             <defs>
@@ -37,8 +37,8 @@ function LoadingSpinner() {
                 y2="74.3928"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop stop-color="#4F46E5" />
-                <stop offset="1" stop-color="#8B5CF6" />
+                <stop stopColor="#4F46E5" />
+                <stop offset="1" stopColor="#8B5CF6" />
               </linearGradient>
             </defs>
           </svg>
