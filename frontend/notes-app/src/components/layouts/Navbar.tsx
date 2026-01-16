@@ -1,5 +1,6 @@
 import { Button } from "../ui/button";
 import EditNoteRoundedIcon from "@mui/icons-material/EditNoteRounded";
+import { Link } from "react-router-dom";
 
 export default function Navbar() {
   return (
@@ -33,8 +34,13 @@ export default function Navbar() {
         </a>
       </nav>
       <div className="flex items-center gap-4">
-        <Button className="flex cursor-pointer items-center justify-center overflow-hidden rounded-half h-9 px-5 bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
-          <span className="truncate">Sign In</span>
+        <Button
+          className="flex cursor-pointer items-center justify-center overflow-hidden rounded-half h-9 px-5 bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+          asChild
+        >
+          <Link to="/signin">
+            <span className="truncate">Sign In</span>
+          </Link>
         </Button>
       </div>
     </header>

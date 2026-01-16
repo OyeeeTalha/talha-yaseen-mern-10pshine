@@ -5,6 +5,8 @@ import WatchLaterRoundedIcon from "@mui/icons-material/WatchLaterRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import { UserAuth } from "@/hooks/userAuth";
+import { useNavigate } from "react-router-dom";
 
 type SidebarProps = {
   activeItem: string;
@@ -12,6 +14,17 @@ type SidebarProps = {
 };
 
 function Sidebar({ activeItem, onItemClick }: SidebarProps) {
+  const { signout } = UserAuth();
+  const navigate = useNavigate();
+
+  const handleSignout = () => {
+    signout(undefined, {
+      onSuccess: () => {
+        navigate("/");
+      },
+    });
+  };
+
   const navItems = [
     { name: "All Notes", icon: DescriptionRoundedIcon },
     { name: "Favorites", icon: StarRoundedIcon },
@@ -44,7 +57,13 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
         <ul className="flex-col gap-1 flex">
           {navItems.map((item) => (
             <li key={item.name}>
-              <a href="javascript:;" onClick={() => onItemClick(item.name)}>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onItemClick(item.name);
+                }}
+              >
                 <div
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg group transition-all ${
                     activeItem === item.name
@@ -81,7 +100,13 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
         <ul className="flex-col gap-1 flex">
           {categories.map((category, index) => (
             <li key={category}>
-              <a href="javascript:;" onClick={() => onItemClick(category)}>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onItemClick(category);
+                }}
+              >
                 <div
                   className={`flex items-center gap-1 px-3 py-2.5 rounded-lg group transition-all ${
                     activeItem === category
@@ -118,7 +143,7 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
       <div className="w-full flex-col flex border-t border-white/5 mt-auto">
         <ul className="flex-col gap-1 flex">
           <li>
-            <a href="javascript:;">
+            <a href="#">
               <div className="p-3 rounded-lg items-center inline-flex">
                 <div className="h-5 items-center gap-3 flex">
                   <div className="flex items-center justify-center text-primary ">
@@ -132,7 +157,13 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
             </a>
           </li>
           <li>
-            <a href="javascript:;">
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                signout();
+              }}
+            >
               <div className="p-3 rounded-lg items-center inline-flex">
                 <div className="h-5 items-center gap-3 flex">
                   <div className="flex items-center justify-center text-primary ">

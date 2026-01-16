@@ -2,6 +2,7 @@ import Footer from "@/components/layouts/Footer";
 import { Button } from "@/components/ui/button";
 import EditNoteRoundedIcon from "@mui/icons-material/EditNoteRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import { handleGoogleSignIn } from "@/services/authService";
 function SignInPage() {
   return (
     <main className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-center p-4">
@@ -33,7 +34,10 @@ function SignInPage() {
           </div>
 
           <div className="space-y-4">
-            <Button className="group relative flex w-full items-center justify-center gap-3 rounded-lg bg-white dark:bg-[#233648] border border-slate-200 dark:border-slate-700 p-3.5 transition-all hover:bg-slate-50 hover:border-slate-300 dark:hover:bg-[#2a4055] dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 dark:focus:ring-offset-[#18222c]">
+            <Button
+              className="group relative flex w-full items-center justify-center gap-3 rounded-lg bg-white dark:bg-[#233648] border border-slate-200 dark:border-slate-700 p-3.5 transition-all hover:bg-slate-50 hover:border-slate-300 dark:hover:bg-[#2a4055] dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 dark:focus:ring-offset-[#18222c]"
+              onClick={handleGoogleSignIn}
+            >
               <svg
                 className="h-5 w-5"
                 viewBox="0 0 24 24"

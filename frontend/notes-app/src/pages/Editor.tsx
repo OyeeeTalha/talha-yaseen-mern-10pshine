@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn"; // Using shadcn interface
 import "@blocknote/shadcn/style.css";
@@ -11,7 +12,41 @@ import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownR
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import { Button } from "@/components/ui/button";
 
+// Mock Database Data
+const MOCK_DB_NOTE = {
+  id: "note-123",
+  title: "Project Phoenix Specs",
+  category: "Work",
+  tags: ["Urgent", "Specs", "Q1"],
+  content: [
+    {
+      type: "heading",
+      content: "Project Phoenix Specifications",
+    },
+    {
+      type: "paragraph",
+      content: "This is a loaded note from the database.",
+    },
+    {
+      type: "bulletListItem",
+      content: "Feature A: Dark Mode",
+    },
+    {
+      type: "bulletListItem",
+      content: "Feature B: Cloud Sync",
+    },
+  ],
+};
+
+type NoteData = {
+  title: string;
+  category: string;
+  tags: string[];
+  content: any[]; // BlockNote blocks
+};
+
 function Editor() {
+  const { noteId } = useParams<{ noteId: string }>();
   const [title, setTitle] = useState("Untitled Note");
   const [selectedCategory, setSelectedCategory] = useState("Personal");
   const [categories, setCategories] = useState([
@@ -28,14 +63,47 @@ function Editor() {
   const [activeSidebarItem, setActiveSidebarItem] = useState("All Notes");
 
   // Initialize BlockNote editor
-  const editor = useCreateBlockNote({
-    initialContent: [
-      {
-        type: "paragraph",
-        content: "Start writing your amazing note here...",
-      },
-    ],
-  });
+  const editor = useCreateBlockNote();
+
+  // Load Note Data (Simulate Fetch)
+  useEffect(() => {
+    if (noteId) {
+      // In a real app, this would be:
+      // const data = await fetch(`/api/notes/${noteId}`).then(res => res.json());
+
+      console.log(`Fetching note with ID: ${noteId}`);
+
+      // Simulating API response delay
+      setTimeout(() => {
+        const data = MOCK_DB_NOTE; // Using mock data
+
+        setTitle(data.title);
+        setSelectedCategory(data.category);
+        setTags(data.tags);
+
+        // Load content into BlockNote
+        if (editor) {
+          editor.replaceBlocks(editor.document, data.content as any);
+        }
+      }, 500);
+    }
+  }, [noteId, editor]);
+
+  // Save Function
+  const handleSave = async () => {
+    const noteData: NoteData = {
+      title,
+      category: selectedCategory,
+      tags,
+      content: editor.document, // Get all blocks from editor
+    };
+
+    console.log("Saving Note Payload:", JSON.stringify(noteData, null, 2));
+
+    // In a real app:
+    // await fetch('/api/notes', { method: 'POST', body: JSON.stringify(noteData) });
+    alert("Note saved! Check console for payload.");
+  };
 
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && tagInput.trim()) {
@@ -79,10 +147,13 @@ function Editor() {
             <span className="text-sm text-gray-500">Last edited just now</span>
           </div>
           <div className="flex items-center gap-3">
-            <Button className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-full text-sm font-medium transition-all">
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-full text-sm font-medium transition-all"
+            >
               <SaveRoundedIcon sx={{ fontSize: 18 }} />
               <span>Save</span>
-            </Button>
+            </button>
           </div>
         </header>
 
