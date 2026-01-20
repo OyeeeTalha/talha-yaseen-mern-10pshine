@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../errors/AppError.js';
-import logger from '../utils/logger.js';
+import { Request, Response, NextFunction } from "express";
+import { AppError } from "../errors/AppError.js";
+import logger from "../utils/logger.js";
 
 const handleCastErrorDB = (err: any) => {
   const message = `Invalid ${err.path}: ${err.value}.`;
@@ -15,7 +15,7 @@ const handleDuplicateFieldsDB = (err: any) => {
 
 const handleValidationErrorDB = (err: any) => {
   const errors = Object.values(err.errors).map((el: any) => el.message);
-  const message = `Invalid input data. ${errors.join('. ')}`;
+  const message = `Invalid input data. ${errors.join(". ")}`;
   return new AppError(message, 400);
 };
 
@@ -38,8 +38,8 @@ const sendErrorProd = (err: any, res: Response) => {
   } else {
     logger.error(err);
     res.status(500).json({
-      status: 'error',
-      message: 'Something went very wrong!',
+      status: "error",
+      message: "Something went very wrong!",
     });
   }
 };
@@ -51,17 +51,18 @@ export const globalErrorHandler = (
   next: NextFunction
 ) => {
   err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+  err.status = err.status || "error";
 
-  if (process.env.NODE_ENV === 'development') {
-    sendErrorDev(err, res);
-  } else if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     let error = { ...err, message: err.message };
 
-    if (err.name === 'CastError') error = handleCastErrorDB(error);
+    if (err.name === "CastError") error = handleCastErrorDB(error);
     if (err.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (err.name === 'ValidationError') error = handleValidationErrorDB(error);
+    if (err.name === "ValidationError") error = handleValidationErrorDB(error);
 
     sendErrorProd(error, res);
+  } else {
+    // Development or test environment
+    sendErrorDev(err, res);
   }
 };
