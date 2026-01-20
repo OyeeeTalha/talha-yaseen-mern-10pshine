@@ -49,6 +49,16 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    // OAuth tokens
+    accessToken: {
+      type: String,
+    },
+    refreshToken: {
+      type: String,
+    },
+    tokenExpiresAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
