@@ -8,6 +8,7 @@ import { AppError } from "./shared/errors/AppError.js";
 
 import { ExpressAuth } from "@auth/express";
 import { authConfig } from "./features/auth/config.js";
+import noteRoutes from "./features/notes/routes.js";
 
 const app: Application = express();
 
@@ -47,6 +48,7 @@ app.set("trust proxy", true);
 app.use("/auth", ExpressAuth(authConfig));
 
 //Express Routes
+app.use("/notes", noteRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({

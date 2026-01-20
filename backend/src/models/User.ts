@@ -1,5 +1,26 @@
 import { Schema, model, InferSchemaType } from "mongoose";
 
+const categorySchema = new Schema(
+  {
+    id: {
+      type: Number,
+      required: true,
+      unique: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false }
+);
+
 const userSchema = new Schema(
   {
     googleId: {
@@ -19,6 +40,10 @@ const userSchema = new Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    catagories: {
+      type: [categorySchema],
+      default: [],
     },
     isDeleted: {
       type: Boolean,
