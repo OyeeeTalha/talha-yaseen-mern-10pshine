@@ -1,21 +1,16 @@
-import { Schema, model, InferSchemaType } from "mongoose";
+import { Schema, model, InferSchemaType, Types } from "mongoose";
 
 const categorySchema = new Schema(
   {
     id: {
-      type: Number,
+      type: Schema.Types.ObjectId,
+      default: () => new Types.ObjectId(),
       required: true,
-      unique: true,
     },
     name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
-    },
-    isDeleted: {
-      type: Boolean,
-      default: false,
     },
   },
   { _id: false },
@@ -43,13 +38,14 @@ const userSchema = new Schema(
     },
     catagories: {
       type: [categorySchema],
-      default: [
-        {
-          id: 1,
-          name: "Void",
-          isDeleted: false,
-        },
-      ],
+      default: function () {
+        return [
+          {
+            id: new Types.ObjectId(),
+            name: "Void",
+          },
+        ];
+      },
     },
     isDeleted: {
       type: Boolean,

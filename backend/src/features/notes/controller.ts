@@ -3,30 +3,47 @@ import { catchAsync } from "../../shared/utils/catchAsync.js";
 import { AppError } from "../../shared/errors/AppError.js";
 import { NoteModel } from "../../models/Notes.js";
 import { UserModel } from "../../models/User.js";
+import { Types } from "mongoose";
 import {
   createNoteSchema,
   updateNoteSchema,
   createCategorySchema,
 } from "./schema.js";
 
-// Helper function to convert category IDs to names in notes
+// Helper function to convert category IDs to names and indices in notes
 const populateCategoryNames = async (notes: any[], userId: string) => {
   const user = await UserModel.findById(userId);
   if (!user) return notes;
 
+  // Create map of category ID to {name, index}
   const categoryMap = new Map(
-    user.catagories.filter((c) => !c.isDeleted).map((c) => [c.id, c.name]),
+    user.catagories.map((c, index) => [
+      c.id.toString(),
+      { name: c.name, index },
+    ]),
   );
 
   return notes.map((note) => {
     const noteObj = note.toObject();
+    const categoryId = noteObj.category?.toString();
+    const categoryInfo = categoryId ? categoryMap.get(categoryId) : null;
+
     return {
       ...noteObj,
-      categoryName: noteObj.category
-        ? categoryMap.get(noteObj.category) || "Void"
-        : "Void",
+      category: categoryId || null, // Keep as ObjectId string or null
+      categoryName: categoryInfo?.name || "Void",
+      categoryIndex: categoryInfo?.index ?? null, // For color generation
     };
   });
+};
+
+// Helper function to capitalize first letter of each word
+const capitalizeFirstLetter = (str: string): string => {
+  return str
+    .trim()
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 };
 
 export const createNote = catchAsync(async (req: Request, res: Response) => {
@@ -202,12 +219,16 @@ export const getNotesByCategory = catchAsync(
       throw new AppError("You must be logged in to view notes", 401);
     }
 
-    // Parse category as number since it's now stored as ID
-    const categoryId = parseInt(category);
+    // Validate category ObjectId if provided
+    const categoryObjectId = category
+      ? Types.ObjectId.isValid(category)
+        ? new Types.ObjectId(category)
+        : null
+      : null;
 
     const notes = await NoteModel.find({
       userId: userId,
-      category: categoryId,
+      category: categoryObjectId,
       isDeleted: false,
     }).sort({ isPinned: -1, updatedAt: -1 });
 
@@ -290,19 +311,39 @@ export const createCategory = catchAsync(
       throw new AppError("You must be logged in to create a category", 401);
     }
 
+    // Capitalize first letter of category name
+    const categoryName = capitalizeFirstLetter(validation.data.name);
+
+    // Get user to find the next available category ID
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    // Check if category with the same name already exists (case-insensitive)
+    const categoryExists = user.catagories.find(
+      (cat) => cat.name.toLowerCase() === categoryName.toLowerCase(),
+    );
+    if (categoryExists) {
+      throw new AppError(
+        `Category "${categoryName}" already exists. Please use a different name.`,
+        400,
+      );
+    }
+
+    // Create new category with ObjectId
     const newCategory = {
-      id: Date.now(),
-      name: validation.data.name,
-      isDeleted: false,
+      id: new Types.ObjectId(),
+      name: categoryName,
     };
 
-    const user = await UserModel.findOneAndUpdate(
+    const updatedUser = await UserModel.findOneAndUpdate(
       { _id: userId },
       { $push: { catagories: newCategory } },
       { new: true },
     );
 
-    if (!user) {
+    if (!updatedUser) {
       throw new AppError("User not found", 404);
     }
 
@@ -320,10 +361,14 @@ export const getCategories = catchAsync(async (req: Request, res: Response) => {
   }
 
   const user = await UserModel.findById(userId);
+
+  // Map categories to include their array index for color generation
   const categories =
-    user?.catagories
-      ?.filter((c) => !c.isDeleted)
-      .sort((a, b) => a.name.localeCompare(b.name)) || [];
+    user?.catagories?.map((cat, index) => ({
+      id: cat.id.toString(),
+      name: cat.name,
+      index, // Add index for consistent color generation
+    })) || [];
 
   res.status(200).json({
     status: "success",
@@ -334,9 +379,7 @@ export const getCategories = catchAsync(async (req: Request, res: Response) => {
 
 export const deleteCategory = catchAsync(
   async (req: Request, res: Response) => {
-    const { id } = req.params;
-    // Parse ID as number since User model uses Number for category id
-    const categoryId = parseInt(id);
+    const { id } = req.params; // ObjectId as string
 
     const userId = res.locals.session?.user?.id;
 
@@ -344,28 +387,38 @@ export const deleteCategory = catchAsync(
       throw new AppError("You must be logged in to delete a category", 401);
     }
 
-    // Find user to get the category before deleting (soft deleting)
+    // Validate ObjectId format
+    if (!Types.ObjectId.isValid(id)) {
+      throw new AppError("Invalid category ID", 400);
+    }
+
+    // Find user to get the category before deleting
     const user = await UserModel.findOne({ _id: userId });
     if (!user) throw new AppError("User not found", 404);
 
-    const category = user.catagories.find((c) => c.id === categoryId);
+    const category = user.catagories.find((c) => c.id.toString() === id);
     if (!category) throw new AppError("Category not found", 404);
 
-    // Soft delete category in User model
+    // Prevent deletion of "Void" category (by name, case-insensitive)
+    if (category.name.toLowerCase() === "void") {
+      throw new AppError("Cannot delete the Void category", 400);
+    }
+
+    // Hard delete category from User model (remove from array)
     await UserModel.updateOne(
-      { _id: userId, "catagories.id": categoryId },
-      { $set: { "catagories.$.isDeleted": true } },
+      { _id: userId },
+      { $pull: { catagories: { id: new Types.ObjectId(id) } } },
     );
 
-    // Set category to null for all notes that had this category ID
+    // Move all notes from this category to Void (null)
     await NoteModel.updateMany(
-      { category: categoryId, userId: userId },
-      { category: null },
+      { category: new Types.ObjectId(id), userId: userId },
+      { $set: { category: null } },
     );
 
     res.status(200).json({
       status: "success",
-      message: "Category deleted successfully",
+      message: "Category deleted successfully. All notes moved to Void.",
     });
   },
 );
@@ -373,7 +426,7 @@ export const deleteCategory = catchAsync(
 export const assignNoteCategory = catchAsync(
   async (req: Request, res: Response) => {
     const { noteId } = req.params;
-    const { category } = req.body; // Expecting category ID (number) or null
+    const { category } = req.body; // Expecting category ID (ObjectId string) or null
     const userId = res.locals.session?.user?.id;
 
     if (!userId) {
@@ -381,10 +434,15 @@ export const assignNoteCategory = catchAsync(
     }
 
     if (category !== null && category !== undefined) {
+      // Validate ObjectId format
+      if (!Types.ObjectId.isValid(category)) {
+        throw new AppError("Invalid category ID", 400);
+      }
+
       // Validate category ownership and existence
       const user = await UserModel.findById(userId);
       const categoryExists = user?.catagories.find(
-        (c) => c.id === category && !c.isDeleted,
+        (c) => c.id.toString() === category,
       );
 
       if (!categoryExists) {
@@ -394,7 +452,7 @@ export const assignNoteCategory = catchAsync(
 
     const note = await NoteModel.findOneAndUpdate(
       { _id: noteId, userId: userId },
-      { category: category || null }, // Store category ID (number) or null
+      { category: category ? new Types.ObjectId(category) : null },
       { new: true },
     );
 
