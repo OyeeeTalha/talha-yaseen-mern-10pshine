@@ -18,7 +18,7 @@ const notesSchema = new Schema(
       required: false,
     },
     category: {
-      type: Number,
+      type: Schema.Types.ObjectId,
       required: false,
       default: null,
     },
