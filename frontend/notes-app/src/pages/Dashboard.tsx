@@ -181,6 +181,8 @@ function Dashboard() {
                       tags={note.tags || []}
                       date={formatDate(note.updatedAt || note.createdAt)}
                       isPinned={note.isPinned || false}
+                      categoryId={note.category}
+                      categoryName={note.categoryName}
                       onPinClick={() =>
                         handlePinToggle(note._id, note.isPinned || false)
                       }
@@ -226,6 +228,8 @@ function Dashboard() {
                       tags={note.tags || []}
                       date={formatDate(note.updatedAt || note.createdAt)}
                       isPinned={note.isPinned || false}
+                      categoryId={note.category}
+                      categoryName={note.categoryName}
                       onPinClick={() =>
                         handlePinToggle(note._id, note.isPinned || false)
                       }

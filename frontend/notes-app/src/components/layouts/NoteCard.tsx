@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
 import PushPinRoundedIcon from "@mui/icons-material/PushPinRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import { getDeterministicColor } from "@/lib/utils";
 
 type NoteCardProps = {
   title: string;
@@ -9,6 +10,8 @@ type NoteCardProps = {
   tags: string[];
   date: string;
   isPinned?: boolean;
+  categoryId?: number | null;
+  categoryName?: string;
   onPinClick?: () => void;
   onDelete?: () => void;
   onClick?: () => void;
@@ -21,6 +24,8 @@ function NoteCard(props: NoteCardProps) {
     tags,
     date,
     isPinned,
+    categoryId,
+    categoryName,
     onPinClick,
     onDelete,
     onClick,
@@ -115,7 +120,32 @@ function NoteCard(props: NoteCardProps) {
 
         {/* Footer Section - Fixed at bottom */}
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* Category Badge */}
+            {categoryName && categoryId !== null && categoryId !== undefined ? (
+              <span
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border"
+                style={{
+                  backgroundColor: `${getDeterministicColor(categoryId)}15`,
+                  borderColor: `${getDeterministicColor(categoryId)}40`,
+                  color: getDeterministicColor(categoryId),
+                }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{
+                    backgroundColor: getDeterministicColor(categoryId),
+                  }}
+                ></span>
+                {categoryName}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-700/40 bg-gray-800/30 text-gray-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+                Void
+              </span>
+            )}
+            {/* Tags */}
             {tags.slice(0, 2).map((tag) => (
               <span
                 key={tag}
