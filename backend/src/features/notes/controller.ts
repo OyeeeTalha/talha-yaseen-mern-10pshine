@@ -23,8 +23,8 @@ const populateCategoryNames = async (notes: any[], userId: string) => {
     return {
       ...noteObj,
       categoryName: noteObj.category
-        ? categoryMap.get(noteObj.category) || "Uncategorized"
-        : "Uncategorized",
+        ? categoryMap.get(noteObj.category) || "Void"
+        : "Void",
     };
   });
 };
