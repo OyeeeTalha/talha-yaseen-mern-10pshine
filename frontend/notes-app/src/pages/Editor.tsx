@@ -54,9 +54,8 @@ function Editor() {
 
   // Get selected category name for display
   const selectedCategoryName = selectedCategoryId
-    ? categories.find((cat) => cat.id === selectedCategoryId)?.name ||
-      "Uncategorized"
-    : "Uncategorized";
+    ? categories.find((cat) => cat.id === selectedCategoryId)?.name || "Void"
+    : "Void";
 
   // Parse note content once - memoize based on content string to avoid re-parsing
   const parsedContent = useMemo(() => {
@@ -228,7 +227,7 @@ function Editor() {
                       <div className="absolute top-full left-0 mt-2 w-56 bg-[#161b22] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                         <div className="p-1">
                           <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                            {/* Uncategorized option */}
+                            {/* Void option */}
                             <button
                               onClick={() => {
                                 setSelectedCategoryId(null);
@@ -240,7 +239,7 @@ function Editor() {
                                   : "text-gray-300 hover:bg-white/5"
                               }`}
                             >
-                              Uncategorized
+                              Void
                               {selectedCategoryId === null && (
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                               )}
