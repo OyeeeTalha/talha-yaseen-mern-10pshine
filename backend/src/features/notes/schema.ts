@@ -3,7 +3,7 @@ import { z } from "zod";
 export const createNoteSchema = z.object({
   title: z.string().optional(),
   content: z.any().optional(), // Allow flexible content for BlockNote
-  category: z.number().optional(),
+  category: z.number().nullable().optional(),
   tags: z.array(z.string()).optional(),
   isPinned: z.boolean().optional(),
 });

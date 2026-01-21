@@ -18,7 +18,7 @@ const categorySchema = new Schema(
       default: false,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const userSchema = new Schema(
@@ -43,7 +43,13 @@ const userSchema = new Schema(
     },
     catagories: {
       type: [categorySchema],
-      default: [],
+      default: [
+        {
+          id: 1,
+          name: "Void",
+          isDeleted: false,
+        },
+      ],
     },
     isDeleted: {
       type: Boolean,
@@ -52,7 +58,7 @@ const userSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export type User = InferSchemaType<typeof userSchema>;
