@@ -7,6 +7,7 @@ import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { UserAuth } from "@/hooks/userAuth";
 import { useNavigate } from "react-router-dom";
+import { useGetCategories } from "@/hooks/useCategories";
 
 type SidebarProps = {
   activeItem: string;
@@ -16,14 +17,7 @@ type SidebarProps = {
 function Sidebar({ activeItem, onItemClick }: SidebarProps) {
   const { signout } = UserAuth();
   const navigate = useNavigate();
-
-  const handleSignout = () => {
-    signout(undefined, {
-      onSuccess: () => {
-        navigate("/");
-      },
-    });
-  };
+  const { data: categoriesData } = useGetCategories();
 
   const navItems = [
     { name: "All Notes", icon: DescriptionRoundedIcon },
@@ -32,7 +26,7 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
     { name: "Trash", icon: DeleteRoundedIcon },
   ];
 
-  const categories = ["Personal", "Work", "Ideas", "Projects"];
+  const categories = categoriesData || [];
 
   return (
     <div className="hidden md:flex flex-col w-[280px] h-full border-r border-white/5 bg-[#111a22] shrink-0 p-4 justify-start gap-10">
@@ -98,18 +92,18 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
           </h6>
         </div>
         <ul className="flex-col gap-1 flex">
-          {categories.map((category, index) => (
-            <li key={category}>
+          {categories.map((category) => (
+            <li key={category.id}>
               <a
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  onItemClick(category);
+                  onItemClick(category.name);
                 }}
               >
                 <div
                   className={`flex items-center gap-1 px-3 py-2.5 rounded-lg group transition-all ${
-                    activeItem === category
+                    activeItem === category.name
                       ? "bg-primary/10 text-primary"
                       : "text-white hover:bg-white/5"
                   }`}
@@ -119,18 +113,18 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
                       <span
                         className="w-2.5 h-2.5 rounded-full"
                         style={{
-                          backgroundColor: getDeterministicColor(index),
+                          backgroundColor: getDeterministicColor(category.id),
                         }}
                       ></span>
                     </div>
                     <h2
                       className={`text-sm font-medium leading-snug ${
-                        activeItem === category
+                        activeItem === category.name
                           ? "text-primary"
                           : "text-gray-400 group-hover:text-white"
                       }`}
                     >
-                      {category}
+                      {category.name}
                     </h2>
                   </div>
                 </div>
@@ -161,7 +155,11 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                signout();
+                signout(undefined, {
+                  onSuccess: () => {
+                    navigate("/");
+                  },
+                });
               }}
             >
               <div className="p-3 rounded-lg items-center inline-flex">
