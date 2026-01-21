@@ -178,11 +178,11 @@ function Dashboard() {
                       key={note._id}
                       title={note.title}
                       content={note.content || ""}
-                      tags={note.tags || []}
                       date={formatDate(note.updatedAt || note.createdAt)}
                       isPinned={note.isPinned || false}
                       categoryId={note.category}
                       categoryName={note.categoryName}
+                      categoryIndex={note.categoryIndex}
                       onPinClick={() =>
                         handlePinToggle(note._id, note.isPinned || false)
                       }
@@ -225,11 +225,11 @@ function Dashboard() {
                       key={note._id}
                       title={note.title}
                       content={note.content || ""}
-                      tags={note.tags || []}
                       date={formatDate(note.updatedAt || note.createdAt)}
                       isPinned={note.isPinned || false}
                       categoryId={note.category}
                       categoryName={note.categoryName}
+                      categoryIndex={note.categoryIndex}
                       onPinClick={() =>
                         handlePinToggle(note._id, note.isPinned || false)
                       }

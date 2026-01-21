@@ -132,7 +132,7 @@ export const deleteCategory = async (id: string): Promise<CategoryResponse> => {
 
 export const assignNoteCategory = async (
   noteId: string,
-  categoryId: number | null,
+  categoryId: string | null,
 ): Promise<NoteResponse> => {
   const response = await fetch(
     `${VITE_API_URL}/notes/assign-note-category/${noteId}`,

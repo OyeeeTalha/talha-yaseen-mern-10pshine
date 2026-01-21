@@ -315,7 +315,7 @@ export function useAssignNoteCategory() {
       categoryId,
     }: {
       noteId: string;
-      categoryId: number | null;
+      categoryId: string | null;
     }) => noteService.assignNoteCategory(noteId, categoryId),
     onMutate: async ({ noteId, categoryId }) => {
       // Cancel outgoing refetches

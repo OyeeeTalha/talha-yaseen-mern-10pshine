@@ -38,7 +38,7 @@ function Editor() {
 
   // Initialize editable state with data from noteData - will update when noteData changes
   const [title, setTitle] = useState(() => noteData?.title || "Untitled Note");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     () => noteData?.category || null,
   );
   const [tags, setTags] = useState<string[]>(() => noteData?.tags || []);
@@ -126,13 +126,37 @@ function Editor() {
       newCategoryInput.trim() &&
       !categories.some((cat) => cat.name === newCategoryInput.trim())
     ) {
+      const categoryName = newCategoryInput.trim();
+
+      // Close dropdown and clear input immediately
+      setNewCategoryInput("");
+      setIsCategoryDropdownOpen(false);
+
       createCategory.mutate(
-        { name: newCategoryInput.trim() },
+        { name: categoryName },
         {
           onSuccess: (response) => {
+            // Update to the real ID from the server
             setSelectedCategoryId(response.data.category.id);
-            setNewCategoryInput("");
-            setIsCategoryDropdownOpen(false);
+
+            // Optimistically update the note with the new category
+            if (noteId) {
+              const notePayload = {
+                title,
+                category: response.data.category.id,
+                tags,
+                content: JSON.stringify(editor.document),
+              };
+
+              updateNote.mutate(
+                { id: noteId, data: notePayload },
+                {
+                  onError: (error) => {
+                    alert(`Failed to assign category: ${error.message}`);
+                  },
+                },
+              );
+            }
           },
         },
       );
@@ -230,8 +254,22 @@ function Editor() {
                             {/* Void option */}
                             <button
                               onClick={() => {
-                                setSelectedCategoryId(null);
+                                const newCategoryId = null;
+                                setSelectedCategoryId(newCategoryId);
                                 setIsCategoryDropdownOpen(false);
+
+                                // Optimistically update the note's category
+                                if (noteId) {
+                                  updateNote.mutate({
+                                    id: noteId,
+                                    data: {
+                                      title,
+                                      category: newCategoryId,
+                                      tags,
+                                      content: JSON.stringify(editor.document),
+                                    },
+                                  });
+                                }
                               }}
                               className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
                                 selectedCategoryId === null
@@ -244,25 +282,46 @@ function Editor() {
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                               )}
                             </button>
-                            {categories.map((cat) => (
-                              <button
-                                key={cat.id}
-                                onClick={() => {
-                                  setSelectedCategoryId(cat.id);
-                                  setIsCategoryDropdownOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
-                                  selectedCategoryId === cat.id
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-gray-300 hover:bg-white/5"
-                                }`}
-                              >
-                                {cat.name}
-                                {selectedCategoryId === cat.id && (
-                                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                )}
-                              </button>
-                            ))}
+                            {/* Filter out Void category from the list */}
+                            {categories
+                              .filter(
+                                (cat) => cat.name.toLowerCase() !== "void",
+                              )
+                              .map((cat) => (
+                                <button
+                                  key={cat.id}
+                                  onClick={() => {
+                                    const newCategoryId = cat.id;
+                                    setSelectedCategoryId(newCategoryId);
+                                    setIsCategoryDropdownOpen(false);
+
+                                    // Optimistically update the note's category
+                                    if (noteId) {
+                                      updateNote.mutate({
+                                        id: noteId,
+                                        data: {
+                                          title,
+                                          category: newCategoryId,
+                                          tags,
+                                          content: JSON.stringify(
+                                            editor.document,
+                                          ),
+                                        },
+                                      });
+                                    }
+                                  }}
+                                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
+                                    selectedCategoryId === cat.id
+                                      ? "bg-primary/10 text-primary"
+                                      : "text-gray-300 hover:bg-white/5"
+                                  }`}
+                                >
+                                  {cat.name}
+                                  {selectedCategoryId === cat.id && (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                  )}
+                                </button>
+                              ))}
                           </div>
                           <div className="border-t border-white/10 mt-1 pt-1 px-2 py-2">
                             <div className="flex items-center gap-2 bg-[#0d1117] px-2 py-1.5 rounded-md border border-white/5 focus-within:border-primary/50 transition-colors">

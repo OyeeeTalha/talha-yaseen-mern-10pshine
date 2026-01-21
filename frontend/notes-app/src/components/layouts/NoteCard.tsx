@@ -7,11 +7,11 @@ import { getDeterministicColor } from "@/lib/utils";
 type NoteCardProps = {
   title: string;
   content: string;
-  tags: string[];
   date: string;
   isPinned?: boolean;
-  categoryId?: number | null;
+  categoryId?: string | null;
   categoryName?: string;
+  categoryIndex?: number | null; // For color generation
   onPinClick?: () => void;
   onDelete?: () => void;
   onClick?: () => void;
@@ -21,11 +21,11 @@ function NoteCard(props: NoteCardProps) {
   const {
     title,
     content,
-    tags,
     date,
     isPinned,
     categoryId,
     categoryName,
+    categoryIndex,
     onPinClick,
     onDelete,
     onClick,
@@ -122,19 +122,24 @@ function NoteCard(props: NoteCardProps) {
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
           <div className="flex gap-2 flex-wrap items-center">
             {/* Category Badge */}
-            {categoryName && categoryId !== null && categoryId !== undefined ? (
+            {categoryName &&
+            categoryId !== null &&
+            categoryId !== undefined &&
+            categoryName.toLowerCase() !== "void" &&
+            categoryIndex !== null &&
+            categoryIndex !== undefined ? (
               <span
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border"
                 style={{
-                  backgroundColor: `${getDeterministicColor(categoryId)}15`,
-                  borderColor: `${getDeterministicColor(categoryId)}40`,
-                  color: getDeterministicColor(categoryId),
+                  backgroundColor: `${getDeterministicColor(categoryIndex)}15`,
+                  borderColor: `${getDeterministicColor(categoryIndex)}40`,
+                  color: getDeterministicColor(categoryIndex),
                 }}
               >
                 <span
                   className="w-1.5 h-1.5 rounded-full"
                   style={{
-                    backgroundColor: getDeterministicColor(categoryId),
+                    backgroundColor: getDeterministicColor(categoryIndex),
                   }}
                 ></span>
                 {categoryName}
@@ -143,20 +148,6 @@ function NoteCard(props: NoteCardProps) {
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-700/40 bg-gray-800/30 text-gray-500">
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
                 Void
-              </span>
-            )}
-            {/* Tags */}
-            {tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium border border-primary/20"
-              >
-                {tag}
-              </span>
-            ))}
-            {tags.length > 2 && (
-              <span className="px-2.5 py-1 rounded-md bg-gray-700/50 text-gray-400 text-xs font-medium">
-                +{tags.length - 2}
               </span>
             )}
           </div>

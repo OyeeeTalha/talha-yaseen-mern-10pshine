@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { getDeterministicColor } from "@/lib/utils"; // Import utils
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
@@ -7,7 +8,7 @@ import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { UserAuth } from "@/hooks/userAuth";
 import { useNavigate } from "react-router-dom";
-import { useGetCategories } from "@/hooks/useCategories";
+import { useGetCategories, useDeleteCategory } from "@/hooks/useCategories";
 
 type SidebarProps = {
   activeItem: string;
@@ -18,6 +19,17 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
   const { signout } = UserAuth();
   const navigate = useNavigate();
   const { data: categoriesData } = useGetCategories();
+  const { mutate: deleteCategory } = useDeleteCategory();
+
+  const [contextMenu, setContextMenu] = useState<{
+    categoryId: string;
+    categoryName: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const longPressTimer = useRef<number | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const navItems = [
     { name: "All Notes", icon: DescriptionRoundedIcon },
@@ -27,6 +39,90 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
   ];
 
   const categories = categoriesData || [];
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target as Node)
+      ) {
+        setContextMenu(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Handle right-click
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    categoryId: string,
+    categoryName: string,
+  ) => {
+    e.preventDefault();
+
+    // Don't allow context menu on Void category
+    if (categoryName.toLowerCase() === "void") return;
+
+    setContextMenu({
+      categoryId,
+      categoryName,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  // Handle long press for mobile
+  const handleTouchStart = (categoryId: string, categoryName: string) => {
+    // Don't allow long press on Void category
+    if (categoryName.toLowerCase() === "void") return;
+
+    longPressTimer.current = window.setTimeout(() => {
+      const rect = document
+        .querySelector(`[data-category-id="${categoryId}"]`)
+        ?.getBoundingClientRect();
+      if (rect) {
+        setContextMenu({
+          categoryId,
+          categoryName,
+          x: rect.right,
+          y: rect.top,
+        });
+      }
+    }, 500); // 500ms long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  // Handle category deletion
+  const handleDeleteCategory = (categoryId: string, categoryName: string) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${categoryName}"?\n\nAll notes in this category will be moved to Void.`,
+      )
+    ) {
+      deleteCategory(categoryId, {
+        onSuccess: () => {
+          setContextMenu(null);
+          // If we're viewing the deleted category, switch to All Notes
+          if (activeItem === categoryName) {
+            onItemClick("All Notes");
+          }
+        },
+        onError: (error: Error) => {
+          alert(`Failed to delete category: ${error.message}`);
+        },
+      });
+    }
+    setContextMenu(null);
+  };
 
   return (
     <div className="hidden md:flex flex-col w-[280px] h-full border-r border-white/5 bg-[#111a22] shrink-0 p-4 justify-start gap-10">
@@ -92,45 +188,61 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
           </h6>
         </div>
         <ul className="flex-col gap-1 flex">
-          {categories.map((category) => (
-            <li key={category.id}>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onItemClick(category.name);
-                }}
-              >
+          {categories
+            .filter((category) => category.name.toLowerCase() !== "void")
+            .map((category) => (
+              <li key={category.id}>
                 <div
-                  className={`flex items-center gap-1 px-3 py-2.5 rounded-lg group transition-all ${
-                    activeItem === category.name
-                      ? "bg-primary/10 text-primary"
-                      : "text-white hover:bg-white/5"
-                  }`}
+                  data-category-id={category.id}
+                  onContextMenu={(e) =>
+                    handleContextMenu(e, category.id, category.name)
+                  }
+                  onTouchStart={() =>
+                    handleTouchStart(category.id, category.name)
+                  }
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
                 >
-                  <div className="h-5 gap-3 flex items-center w-full">
-                    <div className="flex items-center justify-center">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{
-                          backgroundColor: getDeterministicColor(category.id),
-                        }}
-                      ></span>
-                    </div>
-                    <h2
-                      className={`text-sm font-medium leading-snug ${
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onItemClick(category.name);
+                    }}
+                  >
+                    <div
+                      className={`flex items-center gap-1 px-3 py-2.5 rounded-lg group transition-all ${
                         activeItem === category.name
-                          ? "text-primary"
-                          : "text-gray-400 group-hover:text-white"
+                          ? "bg-primary/10 text-primary"
+                          : "text-white hover:bg-white/5"
                       }`}
                     >
-                      {category.name}
-                    </h2>
-                  </div>
+                      <div className="h-5 gap-3 flex items-center w-full">
+                        <div className="flex items-center justify-center">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{
+                              backgroundColor: getDeterministicColor(
+                                category.index,
+                              ),
+                            }}
+                          ></span>
+                        </div>
+                        <h2
+                          className={`text-sm font-medium leading-snug ${
+                            activeItem === category.name
+                              ? "text-primary"
+                              : "text-gray-400 group-hover:text-white"
+                          }`}
+                        >
+                          {category.name}
+                        </h2>
+                      </div>
+                    </div>
+                  </a>
                 </div>
-              </a>
-            </li>
-          ))}
+              </li>
+            ))}
         </ul>
       </div>
 
@@ -176,6 +288,31 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
           </li>
         </ul>
       </div>
+
+      {/* Context Menu for Category Deletion */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="fixed bg-gray-800 border border-white/10 rounded-lg shadow-xl shadow-black/50 z-9999 min-w-40"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+          }}
+        >
+          <button
+            onClick={() =>
+              handleDeleteCategory(
+                contextMenu.categoryId,
+                contextMenu.categoryName,
+              )
+            }
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors rounded-lg"
+          >
+            <DeleteRoundedIcon sx={{ fontSize: 18 }} />
+            <span>Delete Category</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

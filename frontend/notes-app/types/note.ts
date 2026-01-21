@@ -1,8 +1,8 @@
 export interface Category {
   _id?: string;
-  id: number;
+  id: string; // ObjectId as string
   name: string;
-  isDeleted?: boolean;
+  index: number; // Array index for color generation
 }
 
 export interface Note {
@@ -10,8 +10,9 @@ export interface Note {
   userId?: string;
   title: string;
   content?: string;
-  category?: number | null; // Category ID
+  category?: string | null; // Category ID (ObjectId as string)
   categoryName?: string; // Category name populated from backend
+  categoryIndex?: number | null; // Category index for color generation
   tags?: string[];
   isPinned?: boolean;
   isTrash?: boolean;
