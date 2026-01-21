@@ -12,7 +12,6 @@ function ProtectedRoutes() {
     return <LoadingSpinner />;
   }
 
-  console.log("ProtectedRoutes - user:", user);
   // Check if user object exists and has the user property (standard Auth.js session structure)
   if (user && user.user) {
     return (
