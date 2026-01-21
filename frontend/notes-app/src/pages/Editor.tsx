@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn"; // Using shadcn interface
 import "@blocknote/shadcn/style.css";
@@ -11,98 +11,102 @@ import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import { Button } from "@/components/ui/button";
-
-// Mock Database Data
-const MOCK_DB_NOTE = {
-  id: "note-123",
-  title: "Project Phoenix Specs",
-  category: "Work",
-  tags: ["Urgent", "Specs", "Q1"],
-  content: [
-    {
-      type: "heading",
-      content: "Project Phoenix Specifications",
-    },
-    {
-      type: "paragraph",
-      content: "This is a loaded note from the database.",
-    },
-    {
-      type: "bulletListItem",
-      content: "Feature A: Dark Mode",
-    },
-    {
-      type: "bulletListItem",
-      content: "Feature B: Cloud Sync",
-    },
-  ],
-};
-
-type NoteData = {
-  title: string;
-  category: string;
-  tags: string[];
-  content: any[]; // BlockNote blocks
-};
+import { useGetNoteById, useUpdateNote } from "@/hooks/useNotes";
+import { useGetCategories, useCreateCategory } from "@/hooks/useCategories";
+import Loading from "@/components/ui/loading";
 
 function Editor() {
   const { noteId } = useParams<{ noteId: string }>();
-  const [title, setTitle] = useState("Untitled Note");
-  const [selectedCategory, setSelectedCategory] = useState("Personal");
-  const [categories, setCategories] = useState([
-    "Personal",
-    "Work",
-    "Ideas",
-    "Projects",
-  ]);
+  const navigate = useNavigate();
+
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState("");
-
-  const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [activeSidebarItem, setActiveSidebarItem] = useState("All Notes");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Hooks
+  const { data: noteData, isLoading: isLoadingNote } = useGetNoteById(
+    noteId || "",
+  );
+
+  const { data: categoriesData } = useGetCategories();
+  const updateNote = useUpdateNote();
+  const createCategory = useCreateCategory();
+
+  const categories = useMemo(() => categoriesData || [], [categoriesData]);
+
+  // Initialize editable state with data from noteData - will update when noteData changes
+  const [title, setTitle] = useState(() => noteData?.title || "Untitled Note");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    () => noteData?.category || null,
+  );
+  const [tags, setTags] = useState<string[]>(() => noteData?.tags || []);
+
+  // Sync state when switching to a different note or when data loads after refresh
+  useEffect(() => {
+    if (noteData) {
+      setTitle(noteData.title || "Untitled Note");
+      setSelectedCategoryId(noteData.category || null);
+      setTags(noteData.tags || []);
+    }
+  }, [noteId, noteData]); // Sync when noteId changes OR when noteData loads
+
+  // Get selected category name for display
+  const selectedCategoryName = selectedCategoryId
+    ? categories.find((cat) => cat.id === selectedCategoryId)?.name ||
+      "Uncategorized"
+    : "Uncategorized";
+
+  // Parse note content once - memoize based on content string to avoid re-parsing
+  const parsedContent = useMemo(() => {
+    if (noteData?.content) {
+      try {
+        return JSON.parse(noteData.content);
+      } catch (error) {
+        console.error("Failed to parse note content:", error);
+        return undefined;
+      }
+    }
+    return undefined;
+  }, [noteData?.content]); // Only re-parse when content string changes
 
   // Initialize BlockNote editor
   const editor = useCreateBlockNote();
 
-  // Load Note Data (Simulate Fetch)
+  // Load content into editor when note changes
   useEffect(() => {
-    if (noteId) {
-      // In a real app, this would be:
-      // const data = await fetch(`/api/notes/${noteId}`).then(res => res.json());
-
-      console.log(`Fetching note with ID: ${noteId}`);
-
-      // Simulating API response delay
-      setTimeout(() => {
-        const data = MOCK_DB_NOTE; // Using mock data
-
-        setTitle(data.title);
-        setSelectedCategory(data.category);
-        setTags(data.tags);
-
-        // Load content into BlockNote
-        if (editor) {
-          editor.replaceBlocks(editor.document, data.content as any);
-        }
-      }, 500);
+    if (editor && parsedContent) {
+      editor.replaceBlocks(editor.document, parsedContent);
     }
-  }, [noteId, editor]);
+  }, [editor, parsedContent]);
 
   // Save Function
   const handleSave = async () => {
-    const noteData: NoteData = {
+    if (!noteId) return;
+
+    setIsSaving(true);
+
+    const notePayload = {
       title,
-      category: selectedCategory,
+      category: selectedCategoryId,
       tags,
-      content: editor.document, // Get all blocks from editor
+      content: JSON.stringify(editor.document), // Convert BlockNote blocks to JSON string
     };
 
-    console.log("Saving Note Payload:", JSON.stringify(noteData, null, 2));
-
-    // In a real app:
-    // await fetch('/api/notes', { method: 'POST', body: JSON.stringify(noteData) });
-    alert("Note saved! Check console for payload.");
+    updateNote.mutate(
+      { id: noteId, data: notePayload },
+      {
+        onSuccess: () => {
+          setIsSaving(false);
+          alert("Note saved successfully!");
+        },
+        onError: (error) => {
+          setIsSaving(false);
+          alert(`Failed to save note: ${error.message}`);
+        },
+      },
+    );
   };
 
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -121,14 +125,28 @@ function Editor() {
   const handleAddCategory = () => {
     if (
       newCategoryInput.trim() &&
-      !categories.includes(newCategoryInput.trim())
+      !categories.some((cat) => cat.name === newCategoryInput.trim())
     ) {
-      setCategories([...categories, newCategoryInput.trim()]);
-      setSelectedCategory(newCategoryInput.trim());
-      setNewCategoryInput("");
-      setIsCategoryDropdownOpen(false);
+      createCategory.mutate(
+        { name: newCategoryInput.trim() },
+        {
+          onSuccess: (response) => {
+            setSelectedCategoryId(response.data.category.id);
+            setNewCategoryInput("");
+            setIsCategoryDropdownOpen(false);
+          },
+        },
+      );
     }
   };
+
+  if (isLoadingNote) {
+    return (
+      <div className="flex h-screen bg-[#0d1117] items-center justify-center">
+        <Loading />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#0d1117] text-white overflow-hidden font-poppins">
@@ -141,18 +159,28 @@ function Editor() {
         {/* Top Bar for specific note actions */}
         <header className="h-16 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0 bg-[#0d1117]">
           <div className="flex items-center gap-4">
-            <Button className="text-gray-400 hover:text-white transition-colors">
+            <Button
+              onClick={() => navigate("/dashboard")}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
               <ArrowBackRoundedIcon />
             </Button>
-            <span className="text-sm text-gray-500">Last edited just now</span>
+            <span className="text-sm text-gray-500">
+              {noteData?.updatedAt
+                ? `Last edited ${new Date(noteData.updatedAt).toLocaleString()}`
+                : "New note"}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-full text-sm font-medium transition-all"
+              disabled={isSaving || updateNote.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-full text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <SaveRoundedIcon sx={{ fontSize: 18 }} />
-              <span>Save</span>
+              <span>
+                {isSaving || updateNote.isPending ? "Saving..." : "Save"}
+              </span>
             </button>
           </div>
         </header>
@@ -185,9 +213,9 @@ function Editor() {
                       onClick={() =>
                         setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
                       }
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-white/10 hover:bg-white/5 text-gray-300 transition-all min-w-[140px] justify-between"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-white/10 hover:bg-white/5 text-gray-300 transition-all min-w-35 justify-between"
                     >
-                      <span>{selectedCategory}</span>
+                      <span>{selectedCategoryName}</span>
                       <KeyboardArrowDownRoundedIcon
                         sx={{ fontSize: 18 }}
                         className={`transition-transform duration-200 ${
@@ -200,21 +228,38 @@ function Editor() {
                       <div className="absolute top-full left-0 mt-2 w-56 bg-[#161b22] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                         <div className="p-1">
                           <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                            {/* Uncategorized option */}
+                            <button
+                              onClick={() => {
+                                setSelectedCategoryId(null);
+                                setIsCategoryDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
+                                selectedCategoryId === null
+                                  ? "bg-primary/10 text-primary"
+                                  : "text-gray-300 hover:bg-white/5"
+                              }`}
+                            >
+                              Uncategorized
+                              {selectedCategoryId === null && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                              )}
+                            </button>
                             {categories.map((cat) => (
                               <button
-                                key={cat}
+                                key={cat.id}
                                 onClick={() => {
-                                  setSelectedCategory(cat);
+                                  setSelectedCategoryId(cat.id);
                                   setIsCategoryDropdownOpen(false);
                                 }}
                                 className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
-                                  selectedCategory === cat
+                                  selectedCategoryId === cat.id
                                     ? "bg-primary/10 text-primary"
                                     : "text-gray-300 hover:bg-white/5"
                                 }`}
                               >
-                                {cat}
-                                {selectedCategory === cat && (
+                                {cat.name}
+                                {selectedCategoryId === cat.id && (
                                   <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                                 )}
                               </button>
