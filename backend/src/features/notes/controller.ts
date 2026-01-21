@@ -9,6 +9,26 @@ import {
   createCategorySchema,
 } from "./schema.js";
 
+// Helper function to convert category IDs to names in notes
+const populateCategoryNames = async (notes: any[], userId: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) return notes;
+
+  const categoryMap = new Map(
+    user.catagories.filter((c) => !c.isDeleted).map((c) => [c.id, c.name]),
+  );
+
+  return notes.map((note) => {
+    const noteObj = note.toObject();
+    return {
+      ...noteObj,
+      categoryName: noteObj.category
+        ? categoryMap.get(noteObj.category) || "Uncategorized"
+        : "Uncategorized",
+    };
+  });
+};
+
 export const createNote = catchAsync(async (req: Request, res: Response) => {
   const validation = createNoteSchema.safeParse(req.body);
 
@@ -56,13 +76,13 @@ export const updateNote = catchAsync(async (req: Request, res: Response) => {
   const updatedNote = await NoteModel.findOneAndUpdate(
     { _id: id },
     { $set: validation.data },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   );
 
   if (!updatedNote) {
     throw new AppError(
       "Note not found or you do not have permission to edit it",
-      404
+      404,
     );
   }
 
@@ -87,13 +107,13 @@ export const deleteNote = catchAsync(async (req: Request, res: Response) => {
       _id: id,
     },
     { isDeleted: true },
-    { new: true }
+    { new: true },
   );
 
   if (!deletedNote) {
     throw new AppError(
       "Note not found or you do not have permission to delete it",
-      404
+      404,
     );
   }
 
@@ -123,6 +143,9 @@ export const getAllNotes = catchAsync(async (req: Request, res: Response) => {
     .skip(skip)
     .limit(limit);
 
+  // Populate category names
+  const notesWithCategories = await populateCategoryNames(notes, userId);
+
   // Count total documents for pagination metadata
   const totalNotes = await NoteModel.countDocuments({
     userId: userId,
@@ -131,12 +154,12 @@ export const getAllNotes = catchAsync(async (req: Request, res: Response) => {
 
   res.status(200).json({
     status: "success",
-    results: notes.length,
+    results: notesWithCategories.length,
     total: totalNotes,
     page,
     totalPages: Math.ceil(totalNotes / limit),
     data: {
-      notes,
+      notes: notesWithCategories,
     },
   });
 });
@@ -159,10 +182,13 @@ export const getNoteById = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("Note not found", 404);
   }
 
+  // Populate category name for single note
+  const notesWithCategories = await populateCategoryNames([note], userId);
+
   res.status(200).json({
     status: "success",
     data: {
-      note,
+      note: notesWithCategories[0],
     },
   });
 });
@@ -176,20 +202,26 @@ export const getNotesByCategory = catchAsync(
       throw new AppError("You must be logged in to view notes", 401);
     }
 
+    // Parse category as number since it's now stored as ID
+    const categoryId = parseInt(category);
+
     const notes = await NoteModel.find({
       userId: userId,
-      category: category,
+      category: categoryId,
       isDeleted: false,
     }).sort({ isPinned: -1, updatedAt: -1 });
 
+    // Populate category names
+    const notesWithCategories = await populateCategoryNames(notes, userId);
+
     res.status(200).json({
       status: "success",
-      results: notes.length,
+      results: notesWithCategories.length,
       data: {
-        notes,
+        notes: notesWithCategories,
       },
     });
-  }
+  },
 );
 
 export const pinNote = catchAsync(async (req: Request, res: Response) => {
@@ -203,7 +235,7 @@ export const pinNote = catchAsync(async (req: Request, res: Response) => {
   const note = await NoteModel.findOneAndUpdate(
     { _id: id, userId: userId },
     { isPinned: true },
-    { new: true }
+    { new: true },
   );
 
   if (!note) {
@@ -228,7 +260,7 @@ export const unpinNote = catchAsync(async (req: Request, res: Response) => {
   const note = await NoteModel.findOneAndUpdate(
     { _id: id, userId: userId },
     { isPinned: false },
-    { new: true }
+    { new: true },
   );
 
   if (!note) {
@@ -267,7 +299,7 @@ export const createCategory = catchAsync(
     const user = await UserModel.findOneAndUpdate(
       { _id: userId },
       { $push: { catagories: newCategory } },
-      { new: true }
+      { new: true },
     );
 
     if (!user) {
@@ -278,7 +310,7 @@ export const createCategory = catchAsync(
       status: "success",
       data: { category: newCategory },
     });
-  }
+  },
 );
 
 export const getCategories = catchAsync(async (req: Request, res: Response) => {
@@ -312,7 +344,7 @@ export const deleteCategory = catchAsync(
       throw new AppError("You must be logged in to delete a category", 401);
     }
 
-    // Find user to get the category name before deleting (soft deleting)
+    // Find user to get the category before deleting (soft deleting)
     const user = await UserModel.findOne({ _id: userId });
     if (!user) throw new AppError("User not found", 404);
 
@@ -322,37 +354,37 @@ export const deleteCategory = catchAsync(
     // Soft delete category in User model
     await UserModel.updateOne(
       { _id: userId, "catagories.id": categoryId },
-      { $set: { "catagories.$.isDeleted": true } }
+      { $set: { "catagories.$.isDeleted": true } },
     );
 
-    // Set category to null for all notes that had this category name
+    // Set category to null for all notes that had this category ID
     await NoteModel.updateMany(
-      { category: category.name, userId: userId },
-      { category: null }
+      { category: categoryId, userId: userId },
+      { category: null },
     );
 
     res.status(200).json({
       status: "success",
       message: "Category deleted successfully",
     });
-  }
+  },
 );
 
 export const assignNoteCategory = catchAsync(
   async (req: Request, res: Response) => {
     const { noteId } = req.params;
-    const { category } = req.body; // Expecting category Name (string)
+    const { category } = req.body; // Expecting category ID (number) or null
     const userId = res.locals.session?.user?.id;
 
     if (!userId) {
       throw new AppError("You must be logged in to update a note", 401);
     }
 
-    if (category) {
-      // Validate category ownership existence
+    if (category !== null && category !== undefined) {
+      // Validate category ownership and existence
       const user = await UserModel.findById(userId);
       const categoryExists = user?.catagories.find(
-        (c) => c.name === category && !c.isDeleted
+        (c) => c.id === category && !c.isDeleted,
       );
 
       if (!categoryExists) {
@@ -362,8 +394,8 @@ export const assignNoteCategory = catchAsync(
 
     const note = await NoteModel.findOneAndUpdate(
       { _id: noteId, userId: userId },
-      { category: category || null }, // Store name string or null
-      { new: true }
+      { category: category || null }, // Store category ID (number) or null
+      { new: true },
     );
 
     if (!note) {
@@ -375,5 +407,5 @@ export const assignNoteCategory = catchAsync(
       message: "Category assigned to note successfully",
       data: { note },
     });
-  }
+  },
 );

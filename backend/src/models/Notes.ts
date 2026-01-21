@@ -18,7 +18,7 @@ const notesSchema = new Schema(
       required: false,
     },
     category: {
-      type: String,
+      type: Number,
       required: false,
       default: null,
     },
@@ -42,7 +42,7 @@ const notesSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 export type Note = InferSchemaType<typeof notesSchema>;
 export const NoteModel = model<Note>("Note", notesSchema);
