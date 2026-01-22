@@ -17,6 +17,7 @@ export interface Note {
   isPinned?: boolean;
   isFavorite?: boolean;
   isTrash?: boolean;
+  trashedAt?: number | null; // Unix timestamp in seconds
   isDeleted?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;

@@ -18,6 +18,9 @@ import {
   useUnpinNote,
   useFavoriteNote,
   useUnfavoriteNote,
+  useTrashNote,
+  useRestoreNote,
+  usePermanentDeleteNote,
 } from "@/hooks/useNotes";
 import { useGetCategories } from "@/hooks/useCategories";
 import { useGetProfile } from "@/hooks/useUser";
@@ -52,6 +55,9 @@ function Dashboard() {
   const { mutate: unpinNote } = useUnpinNote();
   const { mutate: favoriteNote } = useFavoriteNote();
   const { mutate: unfavoriteNote } = useUnfavoriteNote();
+  const { mutate: trashNote } = useTrashNote();
+  const { mutate: restoreNote } = useRestoreNote();
+  const { mutate: permanentDeleteNote } = usePermanentDeleteNote();
 
   // Get user's display name or first name, fallback to name or "User"
   const userName =
@@ -98,6 +104,32 @@ function Dashboard() {
     } else {
       favoriteNote(noteId);
     }
+  };
+
+  const handleTrash = (noteId: string | undefined) => {
+    if (!noteId) return;
+    trashNote(noteId);
+  };
+
+  const handleRestore = (noteId: string | undefined) => {
+    if (!noteId) return;
+    restoreNote(noteId);
+  };
+
+  const handlePermanentDelete = (noteId: string | undefined) => {
+    if (!noteId) return;
+    if (
+      window.confirm(
+        "Are you sure you want to permanently delete this note? This action cannot be undone.",
+      )
+    ) {
+      permanentDeleteNote(noteId);
+    }
+  };
+
+  const handleAutoPermanentDelete = (noteId: string | undefined) => {
+    if (!noteId) return;
+    permanentDeleteNote(noteId);
   };
 
   const handleDelete = (noteId: string | undefined) => {
@@ -218,6 +250,8 @@ function Dashboard() {
                       date={formatDate(note.updatedAt || note.createdAt)}
                       isPinned={note.isPinned || false}
                       isFavorite={note.isFavorite || false}
+                      isTrash={note.isTrash || false}
+                      trashedAt={note.trashedAt}
                       categoryId={note.category}
                       categoryName={note.categoryName}
                       categoryIndex={note.categoryIndex}
@@ -227,7 +261,9 @@ function Dashboard() {
                       onFavoriteClick={() =>
                         handleFavoriteToggle(note._id, note.isFavorite || false)
                       }
-                      onDelete={() => handleDelete(note._id)}
+                      onRestore={() => handleRestore(note._id)}
+                      onDelete={() => handleTrash(note._id)}
+                      onAutoDelete={() => handleAutoPermanentDelete(note._id)}
                       onClick={() => handleNoteClick(note._id)}
                     />
                   ))}
@@ -274,20 +310,33 @@ function Dashboard() {
                 )}
               </div>
 
-              {selectedCategory === "Trash" ? (
+              {otherNotes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-20 text-center">
                   <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
-                    <DeleteRoundedIcon
-                      className="text-gray-600"
-                      sx={{ fontSize: 32 }}
-                    />
+                    {selectedCategory === "Trash" ? (
+                      <DeleteRoundedIcon
+                        className="text-gray-600"
+                        sx={{ fontSize: 32 }}
+                      />
+                    ) : (
+                      <DescriptionRoundedIcon
+                        className="text-gray-600"
+                        sx={{ fontSize: 32 }}
+                      />
+                    )}
                   </div>
-                  <h3 className="text-gray-300 font-medium">Trash is empty</h3>
+                  <h3 className="text-gray-300 font-medium">
+                    {selectedCategory === "Trash"
+                      ? "Trash is empty"
+                      : "No notes found"}
+                  </h3>
                   <p className="text-gray-500 text-sm mt-1">
-                    Deleted notes will appear here
+                    {selectedCategory === "Trash"
+                      ? "Deleted notes will appear here"
+                      : "Create a new note to get started"}
                   </p>
                 </div>
-              ) : otherNotes.length > 0 ? (
+              ) : (
                 <>
                   {/* List View Headers */}
                   {viewMode === "list" && (
@@ -331,6 +380,8 @@ function Dashboard() {
                         date={formatDate(note.updatedAt || note.createdAt)}
                         isPinned={note.isPinned || false}
                         isFavorite={note.isFavorite || false}
+                        isTrash={note.isTrash || false}
+                        trashedAt={note.trashedAt}
                         categoryId={note.category}
                         categoryName={note.categoryName}
                         categoryIndex={note.categoryIndex}
@@ -344,27 +395,18 @@ function Dashboard() {
                             note.isFavorite || false,
                           )
                         }
-                        onDelete={() => handleDelete(note._id)}
+                        onRestore={() => handleRestore(note._id)}
+                        onDelete={() =>
+                          selectedCategory === "Trash"
+                            ? handlePermanentDelete(note._id)
+                            : handleTrash(note._id)
+                        }
+                        onAutoDelete={() => handleAutoPermanentDelete(note._id)}
                         onClick={() => handleNoteClick(note._id)}
                       />
                     ))}
                   </div>
                 </>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-20 text-center">
-                  <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
-                    <DescriptionRoundedIcon
-                      className="text-gray-600"
-                      sx={{ fontSize: 32 }}
-                    />
-                  </div>
-                  <h3 className="text-gray-300 font-medium">No notes found</h3>
-                  <p className="text-gray-500 text-sm mt-1">
-                    {searchQuery
-                      ? "Try a different search term"
-                      : "Create a new note to get started"}
-                  </p>
-                </div>
               )}
             </section>
           </div>
