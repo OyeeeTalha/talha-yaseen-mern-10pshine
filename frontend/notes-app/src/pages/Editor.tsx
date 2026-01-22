@@ -414,6 +414,343 @@ function Editor() {
         .bn-block-content {
            color: #e2e8f0; /* text-slate-200 */
         }
+
+        /* ===== UNIVERSAL BLOCKNOTE OVERLAY FIX ===== */
+        /* AGGRESSIVE: Target EVERYTHING that could be a popup/overlay */
+        
+        /* Catch-all for any div that appears over content */
+        .bn-container div[style*="position: absolute"],
+        .bn-container div[style*="position: fixed"],
+        .bn-container div[data-radix-portal],
+        .bn-container [data-radix-popper-content-wrapper],
+        .bn-container [data-radix-popper-content-wrapper] > *,
+        .bn-container div[role="dialog"],
+        .bn-container div[role="menu"],
+        .bn-container div[role="listbox"],
+        .bn-container div[role="tooltip"] {
+          background: #1a1f2e !important;
+          background-color: #1a1f2e !important;
+        }
+
+        /* Main menu containers */
+        .bn-container [class*="mantine-Menu"],
+        .bn-container [class*="mantine-Menu"] *,
+        .bn-container .mantine-Menu-dropdown,
+        .bn-container [class*="SuggestionMenu"],
+        .bn-container [class*="FormattingToolbar"],
+        .bn-container [class*="LinkToolbar"],
+        .bn-container [class*="TableHandles"],
+        .bn-container [class*="mantine-Popover"],
+        .bn-container [class*="mantine-Popover-dropdown"],
+        .bn-container [class*="mantine-Modal"],
+        .bn-container [class*="mantine-Modal-content"],
+        .bn-container [class*="mantine-Paper"],
+        .bn-container [role="menu"],
+        .bn-container [role="dialog"],
+        .bn-shadcn-suggestion-menu,
+        .bn-shadcn-suggestion-menu-wrapper,
+        [data-suggestion-menu],
+        [data-radix-popper-content-wrapper] {
+          background: #1a1f2e !important;
+          background-color: #1a1f2e !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          border-radius: 8px !important;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+          z-index: 9999 !important;
+          opacity: 1 !important;
+          backdrop-filter: none !important;
+        }
+
+        /* Modal body and header specific styling */
+        .bn-container [class*="mantine-Modal-body"] {
+          padding: 24px !important;
+          background-color: #1a1f2e !important;
+        }
+
+        .bn-container [class*="mantine-Modal-header"] {
+          padding: 20px 24px !important;
+          background-color: #1a1f2e !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* Target ALL possible panel and form wrappers */
+        .bn-container > div > div > div,
+        .bn-container form,
+        .bn-container fieldset {
+          background-color: inherit !important;
+        }
+
+        /* All nested elements inherit solid background */
+        .bn-container .mantine-Menu-dropdown > *,
+        .bn-container .mantine-Menu-dropdown *,
+        .bn-container [class*="SuggestionMenu"] > *,
+        .bn-container [class*="SuggestionMenu"] *,
+        .bn-container [class*="SuggestionMenu-root"],
+        .bn-container [class*="mantine-Modal-body"],
+        .bn-container [class*="mantine-Modal-header"],
+        .bn-container [class*="mantine-Popover-dropdown"] > * {
+          background: inherit !important;
+          opacity: 1 !important;
+        }
+
+        /* Menu items */
+        .bn-container .mantine-Menu-item,
+        .bn-container [class*="SuggestionMenu"] [class*="item"],
+        .bn-container [class*="SuggestionMenu"] button {
+          color: #e2e8f0 !important;
+          background-color: #1a1f2e !important;
+          border-radius: 4px !important;
+          padding: 8px 12px !important;
+        }
+
+        /* Hover states */
+        .bn-container .mantine-Menu-item:hover,
+        .bn-container [class*="SuggestionMenu"] [class*="item"]:hover,
+        .bn-container [class*="SuggestionMenu"] button:hover,
+        .bn-container .mantine-Menu-item[data-hovered],
+        .bn-container [class*="SuggestionMenu"] [class*="item"][data-selected],
+        .bn-container [class*="SuggestionMenu"] button[data-selected] {
+          background-color: rgba(59, 130, 246, 0.3) !important;
+          color: #60a5fa !important;
+        }
+
+        /* Labels and headers */
+        .bn-container .mantine-Menu-label {
+          color: #9ca3af !important;
+          font-size: 11px !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.05em !important;
+          padding: 8px 12px 4px !important;
+          background-color: #1a1f2e !important;
+        }
+
+        .bn-container [class*="mantine-Modal-title"],
+        .bn-container [class*="mantine-Popover"] h1,
+        .bn-container [class*="mantine-Popover"] h2,
+        .bn-container [class*="mantine-Popover"] h3 {
+          color: #e2e8f0 !important;
+          font-size: 18px !important;
+          font-weight: 600 !important;
+          text-transform: none !important;
+          letter-spacing: normal !important;
+          padding: 0 !important;
+          background-color: transparent !important;
+          margin-bottom: 16px !important;
+        }
+
+        /* Dividers */
+        .bn-container .mantine-Divider-root {
+          border-color: rgba(255, 255, 255, 0.1) !important;
+          background: transparent !important;
+        }
+
+        /* All popover and portal elements */
+        .bn-container [class*="Popover"],
+        .bn-container div[class*="suggestion"],
+        .bn-container div[class*="Suggestion"],
+        .bn-container div[class*="menu"],
+        .bn-container div[class*="Menu"] {
+          background: #1a1f2e !important;
+          opacity: 1 !important;
+        }
+
+        /* Formatting Toolbar */
+        .bn-container [class*="FormattingToolbar"] button,
+        .bn-container [class*="LinkToolbar"] button {
+          color: #e2e8f0 !important;
+          background-color: #1a1f2e !important;
+          border-radius: 4px !important;
+        }
+
+        .bn-container [class*="FormattingToolbar"] button:hover,
+        .bn-container [class*="LinkToolbar"] button:hover {
+          background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .bn-container [class*="FormattingToolbar"] button[data-active="true"],
+        .bn-container [class*="LinkToolbar"] button[data-active="true"] {
+          background-color: rgba(59, 130, 246, 0.25) !important;
+          color: #60a5fa !important;
+        }
+
+        /* Input fields in ALL menus and modals */
+        .bn-container input,
+        .bn-container input[type="text"],
+        .bn-container input[type="url"],
+        .bn-container input[type="number"],
+        .bn-container input[type="file"],
+        .bn-container textarea,
+        .bn-container select,
+        .bn-container [class*="mantine-Input"],
+        .bn-container [class*="mantine-Textarea"],
+        .bn-container [class*="mantine-Select"] {
+          background-color: #0d1117 !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: #e2e8f0 !important;
+          border-radius: 4px !important;
+          padding: 8px 12px !important;
+          font-size: 14px !important;
+        }
+
+        .bn-container input:focus,
+        .bn-container input[type="text"]:focus,
+        .bn-container input[type="url"]:focus,
+        .bn-container input[type="number"]:focus,
+        .bn-container textarea:focus,
+        .bn-container select:focus,
+        .bn-container [class*="mantine-Input"]:focus-within,
+        .bn-container [class*="mantine-Textarea"]:focus-within,
+        .bn-container [class*="mantine-Select"]:focus-within {
+          border-color: #60a5fa !important;
+          outline: none !important;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+
+        /* Buttons in modals and popups - Remove aggressive override */
+        .bn-container [class*="mantine-Button"],
+        .bn-container [class*="mantine-Modal"] button:not([class*="mantine-Modal-close"]),
+        .bn-container [class*="mantine-Popover"] button:not([class*="CloseButton"]) {
+          background-color: transparent !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          color: #e2e8f0 !important;
+          border-radius: 6px !important;
+          padding: 8px 16px !important;
+          font-size: 14px !important;
+          font-weight: 500 !important;
+          transition: all 0.2s !important;
+        }
+
+        .bn-container [class*="mantine-Button"]:hover,
+        .bn-container [class*="mantine-Modal"] button:not([class*="mantine-Modal-close"]):hover,
+        .bn-container [class*="mantine-Popover"] button:not([class*="CloseButton"]):hover {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          border-color: #60a5fa !important;
+        }
+
+        .bn-container [class*="mantine-Button-filled"],
+        .bn-container button[class*="mantine-Button"][data-variant="filled"],
+        .bn-container button[data-primary="true"] {
+          background-color: #3b82f6 !important;
+          border-color: #3b82f6 !important;
+          color: white !important;
+        }
+
+        .bn-container [class*="mantine-Button-filled"]:hover,
+        .bn-container button[class*="mantine-Button"][data-variant="filled"]:hover,
+        .bn-container button[data-primary="true"]:hover {
+          background-color: #2563eb !important;
+          border-color: #2563eb !important;
+        }
+
+        /* Drag handle */
+        .bn-container [class*="DragHandle"] {
+          background-color: #374151 !important;
+        }
+
+        .bn-container [class*="DragHandle"]:hover {
+          background-color: #4b5563 !important;
+        }
+
+        /* Side menu */
+        .bn-container [class*="SideMenu"] {
+          background-color: transparent !important;
+        }
+
+        /* Color picker */
+        .bn-container [class*="ColorPicker"] {
+          background-color: #1a1f2e !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* File upload and embed modals - ULTRA SPECIFIC */
+        .bn-container [class*="FilePanel"],
+        .bn-container [class*="EmbedPanel"],
+        .bn-container [class*="ImagePanel"],
+        .bn-container [class*="VideoPanel"],
+        .bn-container [class*="AudioPanel"],
+        .bn-container [class*="FileInput"],
+        .bn-container [class*="UrlInput"],
+        .bn-container [class*="file"],
+        .bn-container [class*="File"],
+        .bn-container [class*="embed"],
+        .bn-container [class*="Embed"],
+        .bn-container [class*="image"],
+        .bn-container [class*="Image"],
+        .bn-container [class*="upload"],
+        .bn-container [class*="Upload"] {
+          background: #1a1f2e !important;
+          background-color: #1a1f2e !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          border-radius: 8px !important;
+          padding: 16px !important;
+        }
+
+        /* Backdrop overlay styling */
+        .bn-container [class*="overlay"],
+        .bn-container [class*="Overlay"],
+        .bn-container [class*="portal"],
+        .bn-container [class*="Portal"],
+        .bn-container [class*="mantine-Modal-overlay"],
+        .bn-container [class*="backdrop"],
+        .bn-container [class*="Backdrop"] {
+          background: rgba(0, 0, 0, 0.5) !important;
+          backdrop-filter: blur(4px) !important;
+        }
+
+        /* Ensure all text in overlays is visible */
+        .bn-container [class*="mantine-Modal"] *,
+        .bn-container [class*="mantine-Popover"] *,
+        .bn-container [role="dialog"] *,
+        .bn-container [data-radix-popper-content-wrapper] * {
+          color: inherit !important;
+        }
+
+        .bn-container [class*="mantine-Text"],
+        .bn-container label,
+        .bn-container p,
+        .bn-container span {
+          color: #e2e8f0 !important;
+        }
+
+        /* Close buttons */
+        .bn-container [class*="mantine-Modal-close"],
+        .bn-container [class*="CloseButton"],
+        .bn-container button[aria-label*="close"],
+        .bn-container button[aria-label*="Close"] {
+          color: #9ca3af !important;
+          background-color: transparent !important;
+        }
+
+        .bn-container [class*="mantine-Modal-close"]:hover,
+        .bn-container [class*="CloseButton"]:hover,
+        .bn-container button[aria-label*="close"]:hover,
+        .bn-container button[aria-label*="Close"]:hover {
+          color: #e2e8f0 !important;
+          background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* Tabs if any */
+        .bn-container [class*="mantine-Tabs"],
+        .bn-container [role="tablist"] {
+          background-color: #1a1f2e !important;
+        }
+
+        .bn-container [class*="mantine-Tabs-tab"],
+        .bn-container [role="tab"] {
+          color: #9ca3af !important;
+          background-color: transparent !important;
+        }
+
+        .bn-container [class*="mantine-Tabs-tab"]:hover,
+        .bn-container [role="tab"]:hover {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .bn-container [class*="mantine-Tabs-tab"][data-active="true"],
+        .bn-container [role="tab"][aria-selected="true"] {
+          color: #60a5fa !important;
+          border-bottom-color: #60a5fa !important;
+        }
       `}</style>
     </div>
   );
