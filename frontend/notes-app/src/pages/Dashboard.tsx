@@ -8,6 +8,8 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import PushPinRoundedIcon from "@mui/icons-material/PushPinRounded";
+import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
+import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 import {
   useCreateNote,
   useGetAllNotes,
@@ -25,6 +27,7 @@ function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("All Notes");
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const navigate = useNavigate();
 
   // Hooks
@@ -196,13 +199,41 @@ function Dashboard() {
 
             {/* Main Notes Section */}
             <section>
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2 text-white">
                   <h2 className="text-xl font-bold">{selectedCategory}</h2>
                   <span className="text-sm text-gray-500 font-medium ml-1">
                     ({otherNotes.length})
                   </span>
                 </div>
+
+                {/* View Toggle Buttons */}
+                {otherNotes.length > 0 && (
+                  <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1 border border-white/5">
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={`p-2 rounded-md transition-all ${
+                        viewMode === "grid"
+                          ? "bg-primary text-white shadow-lg shadow-primary/20"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                      }`}
+                      title="Grid View"
+                    >
+                      <GridViewRoundedIcon sx={{ fontSize: 20 }} />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("list")}
+                      className={`p-2 rounded-md transition-all ${
+                        viewMode === "list"
+                          ? "bg-primary text-white shadow-lg shadow-primary/20"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                      }`}
+                      title="List View"
+                    >
+                      <ViewListRoundedIcon sx={{ fontSize: 20 }} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {selectedCategory === "Trash" ? (
@@ -219,25 +250,61 @@ function Dashboard() {
                   </p>
                 </div>
               ) : otherNotes.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {otherNotes.map((note) => (
-                    <NoteCard
-                      key={note._id}
-                      title={note.title}
-                      content={note.content || ""}
-                      date={formatDate(note.updatedAt || note.createdAt)}
-                      isPinned={note.isPinned || false}
-                      categoryId={note.category}
-                      categoryName={note.categoryName}
-                      categoryIndex={note.categoryIndex}
-                      onPinClick={() =>
-                        handlePinToggle(note._id, note.isPinned || false)
-                      }
-                      onDelete={() => handleDelete(note._id)}
-                      onClick={() => handleNoteClick(note._id)}
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* List View Headers */}
+                  {viewMode === "list" && (
+                    <div className="flex items-center gap-6 px-6 py-3 mb-2 border-b border-white/5">
+                      <div className="w-48 shrink-0">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          Title
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0 px-4">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          Snippet
+                        </span>
+                      </div>
+                      <div className="w-32 shrink-0">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          Categories
+                        </span>
+                      </div>
+                      <div className="w-24 shrink-0 text-right">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          Last Edited
+                        </span>
+                      </div>
+                      <div className="w-8 shrink-0"></div>
+                    </div>
+                  )}
+
+                  <div
+                    className={
+                      viewMode === "grid"
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                        : "flex flex-col gap-2"
+                    }
+                  >
+                    {otherNotes.map((note) => (
+                      <NoteCard
+                        key={note._id}
+                        title={note.title}
+                        content={note.content || ""}
+                        date={formatDate(note.updatedAt || note.createdAt)}
+                        isPinned={note.isPinned || false}
+                        categoryId={note.category}
+                        categoryName={note.categoryName}
+                        categoryIndex={note.categoryIndex}
+                        viewMode={viewMode}
+                        onPinClick={() =>
+                          handlePinToggle(note._id, note.isPinned || false)
+                        }
+                        onDelete={() => handleDelete(note._id)}
+                        onClick={() => handleNoteClick(note._id)}
+                      />
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="flex flex-col items-center justify-center p-20 text-center">
                   <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
