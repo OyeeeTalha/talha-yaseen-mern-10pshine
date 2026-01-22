@@ -10,6 +10,10 @@ import {
 } from "@/hooks/useUser";
 import { UserAuth } from "@/hooks/userAuth";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import { useToast } from "@/hooks/useToast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { ToastContainer } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // Available avatar options
 const AVATAR_OPTIONS = [
@@ -59,6 +63,11 @@ function ProfilePage() {
   const updateProfile = useUpdateProfile();
   const deactivateAccount = useDeactivateAccount();
 
+  // Toast and Confirm hooks
+  const { toasts, hideToast, success, error: showError } = useToast();
+  const { confirm, isOpen, options, handleConfirm, handleCancel } =
+    useConfirm();
+
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [formData, setFormData] = useState({
     displayName: "",
@@ -100,9 +109,9 @@ function ProfilePage() {
   const handleSaveChanges = async () => {
     try {
       await updateProfile.mutateAsync(formData);
-      alert("Profile updated successfully!");
+      success("Profile updated successfully");
     } catch (error: any) {
-      alert(`Failed to update profile: ${error.message}`);
+      showError(`Failed to update profile: ${error.message}`);
     }
   };
 
@@ -121,17 +130,23 @@ function ProfilePage() {
   };
 
   const handleDeactivate = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to deactivate your account? This action cannot be undone.",
-    );
+    const confirmed = await confirm({
+      title: "Deactivate Account?",
+      message:
+        "Are you sure you want to deactivate your account? This action cannot be undone and all your data will be permanently deleted.",
+      confirmText: "Deactivate",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+
     if (confirmed) {
       try {
         await deactivateAccount.mutateAsync();
-        alert("Account deactivated successfully");
+        success("Account deactivated successfully");
         await signout();
         navigate("/");
       } catch (error: any) {
-        alert(`Failed to deactivate account: ${error.message}`);
+        showError(`Failed to deactivate account: ${error.message}`);
       }
     }
   };
@@ -148,6 +163,21 @@ function ProfilePage() {
 
   return (
     <div className="flex h-screen bg-[#0d1117] text-white overflow-hidden font-poppins">
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={hideToast} />
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isOpen}
+        title={options.title}
+        message={options.message}
+        confirmText={options.confirmText}
+        cancelText={options.cancelText}
+        variant={options.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+
       <Sidebar
         activeItem={activeSidebarItem}
         onItemClick={setActiveSidebarItem}

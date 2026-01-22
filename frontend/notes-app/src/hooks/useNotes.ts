@@ -118,7 +118,6 @@ export function useCreateNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      alert(`Failed to create note: ${error.message}`);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -172,8 +171,6 @@ export function useUpdateNote() {
         );
       }
       setError(error.message);
-      // Show user-friendly error message
-      alert(`Failed to update note: ${error.message}`);
     },
     onSettled: (_, __, variables) => {
       // Refetch to ensure server state
@@ -213,8 +210,6 @@ export function useDeleteNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      // Show user-friendly error message
-      alert(`Failed to delete note: ${error.message}`);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -253,8 +248,6 @@ export function usePinNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      // Show user-friendly error message
-      alert(`Failed to pin note: ${error.message}`);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -293,8 +286,6 @@ export function useUnpinNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      // Show user-friendly error message
-      alert(`Failed to unpin note: ${error.message}`);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -333,7 +324,6 @@ export function useFavoriteNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      alert(`Failed to favorite note: ${error.message}`);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -372,7 +362,6 @@ export function useUnfavoriteNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      alert(`Failed to unfavorite note: ${error.message}`);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -415,7 +404,6 @@ export function useTrashNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      alert(`Failed to trash note: ${error.message}`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: noteKeys.lists() });
@@ -450,7 +438,6 @@ export function useRestoreNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      alert(`Failed to restore note: ${error.message}`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: noteKeys.lists() });
@@ -481,7 +468,6 @@ export function usePermanentDeleteNote() {
         queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
       }
       setError(error.message);
-      alert(`Failed to permanently delete note: ${error.message}`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: noteKeys.lists() });
@@ -543,7 +529,6 @@ export function useAssignNoteCategory() {
         );
       }
       setError(error.message);
-      alert(`Failed to assign category: ${error.message}`);
     },
     onSettled: (_, __, variables) => {
       // Refetch to ensure server state

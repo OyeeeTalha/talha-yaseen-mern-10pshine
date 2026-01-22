@@ -10,6 +10,10 @@ import { UserAuth } from "@/hooks/userAuth";
 import { useNavigate } from "react-router-dom";
 import { useGetCategories, useDeleteCategory } from "@/hooks/useCategories";
 import { useGetProfile } from "@/hooks/useUser";
+import { useToast } from "@/hooks/useToast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { ToastContainer } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type SidebarProps = {
   activeItem: string;
@@ -39,6 +43,11 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
   const { data: categoriesData } = useGetCategories();
   const { mutate: deleteCategory } = useDeleteCategory();
   const { data: profileData } = useGetProfile();
+
+  // Toast and Confirm hooks
+  const { toasts, hideToast, success, error: showError } = useToast();
+  const { confirm, isOpen, options, handleConfirm, handleCancel } =
+    useConfirm();
 
   const [contextMenu, setContextMenu] = useState<{
     categoryId: string;
@@ -121,30 +130,74 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
   };
 
   // Handle category deletion
-  const handleDeleteCategory = (categoryId: string, categoryName: string) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${categoryName}"?\n\nAll notes in this category will be moved to Void.`,
-      )
-    ) {
+  const handleDeleteCategory = async (
+    categoryId: string,
+    categoryName: string,
+  ) => {
+    const confirmed = await confirm({
+      title: "Delete this category?",
+      message: `Are you sure you want to delete "${categoryName}"?\n\nAll notes in this category will be moved to Void.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+
+    if (confirmed) {
       deleteCategory(categoryId, {
         onSuccess: () => {
           setContextMenu(null);
+          success("Category deleted");
           // If we're viewing the deleted category, switch to All Notes
           if (activeItem === categoryName) {
             onItemClick("All Notes");
           }
         },
         onError: (error: Error) => {
-          alert(`Failed to delete category: ${error.message}`);
+          setContextMenu(null);
+          showError(`Failed to delete category: ${error.message}`);
+        },
+      });
+    } else {
+      setContextMenu(null);
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    const confirmed = await confirm({
+      title: "Logout?",
+      message: "Are you sure you want to logout from your account?",
+      confirmText: "Logout",
+      cancelText: "Cancel",
+      variant: "warning",
+    });
+
+    if (confirmed) {
+      signout(undefined, {
+        onSuccess: () => {
+          navigate("/");
         },
       });
     }
-    setContextMenu(null);
   };
 
   return (
     <div className="hidden md:flex flex-col w-[280px] h-full border-r border-white/5 bg-[#111a22] shrink-0 p-4 justify-start gap-10">
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={hideToast} />
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isOpen}
+        title={options.title}
+        message={options.message}
+        confirmText={options.confirmText}
+        cancelText={options.cancelText}
+        variant={options.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+
       <div className="w-full justify-between items-center gap-3 inline-flex">
         <div
           className="absolute w-10 h-10 border-2 border-solid border-sky-600 flex justify-center items-center rounded-full"
@@ -301,11 +354,7 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                signout(undefined, {
-                  onSuccess: () => {
-                    navigate("/");
-                  },
-                });
+                handleLogout();
               }}
             >
               <div className="p-3 rounded-lg items-center inline-flex">

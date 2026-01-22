@@ -26,6 +26,10 @@ import { useGetCategories } from "@/hooks/useCategories";
 import { useGetProfile } from "@/hooks/useUser";
 import Loading from "@/components/ui/loading";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/hooks/useToast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { ToastContainer } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // Helper function to format date
 
@@ -39,6 +43,11 @@ function Dashboard() {
     return (saved as "grid" | "list") || "grid";
   });
   const navigate = useNavigate();
+
+  // Toast and Confirm hooks
+  const { toasts, hideToast, success, error } = useToast();
+  const { confirm, isOpen, options, handleConfirm, handleCancel } =
+    useConfirm();
 
   // Save view mode to localStorage whenever it changes
   useEffect(() => {
@@ -88,9 +97,13 @@ function Dashboard() {
   const handlePinToggle = (noteId: string | undefined, isPinned: boolean) => {
     if (!noteId) return;
     if (isPinned) {
-      unpinNote(noteId);
+      unpinNote(noteId, {
+        onSuccess: () => success("Note unpinned"),
+      });
     } else {
-      pinNote(noteId);
+      pinNote(noteId, {
+        onSuccess: () => success("Note pinned"),
+      });
     }
   };
 
@@ -100,29 +113,42 @@ function Dashboard() {
   ) => {
     if (!noteId) return;
     if (isFavorite) {
-      unfavoriteNote(noteId);
+      unfavoriteNote(noteId, {
+        onSuccess: () => success("Removed from favorites"),
+      });
     } else {
-      favoriteNote(noteId);
+      favoriteNote(noteId, {
+        onSuccess: () => success("Added to favorites"),
+      });
     }
   };
 
   const handleTrash = (noteId: string | undefined) => {
     if (!noteId) return;
-    trashNote(noteId);
+    trashNote(noteId, {
+      onSuccess: () => success("Note moved to trash"),
+    });
   };
 
   const handleRestore = (noteId: string | undefined) => {
     if (!noteId) return;
-    restoreNote(noteId);
+    restoreNote(noteId, {
+      onSuccess: () => success("Note restored"),
+    });
   };
 
-  const handlePermanentDelete = (noteId: string | undefined) => {
+  const handlePermanentDelete = async (noteId: string | undefined) => {
     if (!noteId) return;
-    if (
-      window.confirm(
-        "Are you sure you want to permanently delete this note? This action cannot be undone.",
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "Delete this note?",
+      message:
+        "Are you sure you want to delete this note? This action cannot be undone and will be permanently removed from your library.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+
+    if (confirmed) {
       permanentDeleteNote(noteId);
     }
   };
@@ -132,10 +158,21 @@ function Dashboard() {
     permanentDeleteNote(noteId);
   };
 
-  const handleDelete = (noteId: string | undefined) => {
+  const handleDelete = async (noteId: string | undefined) => {
     if (!noteId) return;
-    if (window.confirm("Are you sure you want to delete this note?")) {
-      deleteNote(noteId);
+    const confirmed = await confirm({
+      title: "Delete this note?",
+      message:
+        "Are you sure you want to delete this note? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+
+    if (confirmed) {
+      deleteNote(noteId, {
+        onSuccess: () => success("Note deleted"),
+      });
     }
   };
 
@@ -188,6 +225,21 @@ function Dashboard() {
 
   return (
     <div className="flex h-screen bg-[#0d1117] overflow-hidden font-poppins">
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={hideToast} />
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isOpen}
+        title={options.title}
+        message={options.message}
+        confirmText={options.confirmText}
+        cancelText={options.cancelText}
+        variant={options.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+
       <Sidebar
         activeItem={selectedCategory}
         onItemClick={setSelectedCategory}
@@ -283,28 +335,28 @@ function Dashboard() {
 
                 {/* View Toggle Buttons */}
                 {otherNotes.length > 0 && (
-                  <div className="flex items-center gap-0.5 bg-gray-800/50 rounded-md p-0.5 border border-white/5">
+                  <div className="h-8  flex items-center gap-1 bg-gray-800/50 rounded  border border-white/5">
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`p-1.5 rounded transition-all ${
+                      className={`h-8 w-8  rounded transition-all ${
                         viewMode === "grid"
                           ? "bg-primary text-white shadow-md shadow-primary/20"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
                       }`}
                       title="Grid View"
                     >
-                      <GridViewRoundedIcon sx={{ fontSize: 18 }} />
+                      <GridViewRoundedIcon sx={{ fontSize: 16 }} />
                     </button>
                     <button
                       onClick={() => setViewMode("list")}
-                      className={`p-1.5 rounded transition-all ${
+                      className={`h-8 w-8  rounded transition-all ${
                         viewMode === "list"
                           ? "bg-primary text-white shadow-md shadow-primary/20"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
                       }`}
                       title="List View"
                     >
-                      <ViewListRoundedIcon sx={{ fontSize: 18 }} />
+                      <ViewListRoundedIcon sx={{ fontSize: 16 }} />
                     </button>
                   </div>
                 )}
