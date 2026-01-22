@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/layouts/Sidebar";
 import NoteCard from "@/components/layouts/NoteCard";
@@ -27,8 +27,17 @@ function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("All Notes");
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  // Load view mode from localStorage or default to "grid"
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    const saved = localStorage.getItem("notesViewMode");
+    return (saved as "grid" | "list") || "grid";
+  });
   const navigate = useNavigate();
+
+  // Save view mode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("notesViewMode", viewMode);
+  }, [viewMode]);
 
   // Hooks
   const { data: notes = [], isLoading } = useGetAllNotes();
@@ -209,28 +218,28 @@ function Dashboard() {
 
                 {/* View Toggle Buttons */}
                 {otherNotes.length > 0 && (
-                  <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1 border border-white/5">
+                  <div className="flex items-center gap-0.5 bg-gray-800/50 rounded-md p-0.5 border border-white/5">
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`p-2 rounded-md transition-all ${
+                      className={`p-1.5 rounded transition-all ${
                         viewMode === "grid"
-                          ? "bg-primary text-white shadow-lg shadow-primary/20"
+                          ? "bg-primary text-white shadow-md shadow-primary/20"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
                       }`}
                       title="Grid View"
                     >
-                      <GridViewRoundedIcon sx={{ fontSize: 20 }} />
+                      <GridViewRoundedIcon sx={{ fontSize: 18 }} />
                     </button>
                     <button
                       onClick={() => setViewMode("list")}
-                      className={`p-2 rounded-md transition-all ${
+                      className={`p-1.5 rounded transition-all ${
                         viewMode === "list"
-                          ? "bg-primary text-white shadow-lg shadow-primary/20"
+                          ? "bg-primary text-white shadow-md shadow-primary/20"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
                       }`}
                       title="List View"
                     >
-                      <ViewListRoundedIcon sx={{ fontSize: 20 }} />
+                      <ViewListRoundedIcon sx={{ fontSize: 18 }} />
                     </button>
                   </div>
                 )}

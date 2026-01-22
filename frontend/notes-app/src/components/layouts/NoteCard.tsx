@@ -199,7 +199,7 @@ function NoteCard(props: NoteCardProps) {
   return (
     <div className="w-full relative">
       <div
-        className="group flex flex-col p-5 h-44 rounded-2xl bg-gray-800/50 border border-white/5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/20 transition-all cursor-pointer"
+        className="group flex flex-col p-5 h-54 rounded-2xl bg-gray-800/50 border border-white/5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/20 transition-all cursor-pointer"
         onClick={(e) => {
           // Don't navigate if clicking inside the menu area or dropdown
           if (
