@@ -9,6 +9,7 @@ import {
   updateNoteSchema,
   createCategorySchema,
 } from "./schema.js";
+import { TRASH_PERIOD_SECONDS } from "../../config/trash.config.js";
 
 // Helper function to convert category IDs to names and indices in notes
 const populateCategoryNames = async (notes: any[], userId: string) => {
@@ -142,6 +143,94 @@ export const deleteNote = catchAsync(async (req: Request, res: Response) => {
     },
   });
 });
+
+export const trashNote = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = res.locals.session?.user?.id;
+
+  if (!userId) {
+    throw new AppError("You must be logged in to trash a note", 401);
+  }
+
+  const trashedAt = Math.floor(Date.now() / 1000); // Current time in Unix seconds
+
+  const trashedNote = await NoteModel.findOneAndUpdate(
+    { _id: id, userId: userId },
+    {
+      isTrash: true,
+      trashedAt: trashedAt,
+      isPinned: false, // Unpin when trashing
+      isFavorite: false, // Remove from favorites when trashing
+    },
+    { new: true },
+  );
+
+  if (!trashedNote) {
+    throw new AppError("Note not found", 404);
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Note moved to trash",
+    data: { note: trashedNote },
+  });
+});
+
+export const restoreNote = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = res.locals.session?.user?.id;
+
+  if (!userId) {
+    throw new AppError("You must be logged in to restore a note", 401);
+  }
+
+  const restoredNote = await NoteModel.findOneAndUpdate(
+    { _id: id, userId: userId },
+    {
+      isTrash: false,
+      trashedAt: null,
+    },
+    { new: true },
+  );
+
+  if (!restoredNote) {
+    throw new AppError("Note not found", 404);
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Note restored successfully",
+    data: { note: restoredNote },
+  });
+});
+
+export const permanentDeleteNote = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const userId = res.locals.session?.user?.id;
+
+    if (!userId) {
+      throw new AppError("You must be logged in to delete a note", 401);
+    }
+
+    // Soft delete: mark as deleted instead of removing from database
+    const deletedNote = await NoteModel.findOneAndUpdate(
+      { _id: id, userId: userId },
+      { isDeleted: true },
+      { new: true },
+    );
+
+    if (!deletedNote) {
+      throw new AppError("Note not found", 404);
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Note permanently deleted",
+      data: { note: deletedNote },
+    });
+  },
+);
 
 export const getAllNotes = catchAsync(async (req: Request, res: Response) => {
   const userId = res.locals.session?.user?.id;

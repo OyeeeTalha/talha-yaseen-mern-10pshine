@@ -4,6 +4,9 @@ import {
   createNote,
   updateNote,
   deleteNote,
+  trashNote,
+  restoreNote,
+  permanentDeleteNote,
   getAllNotes,
   getNoteById,
   getNotesByCategory,
@@ -24,6 +27,10 @@ router.use(protect);
 router.post("/create-note", createNote);
 router.patch("/update-note/:id", updateNote);
 router.delete("/delete-note/:id", deleteNote);
+
+router.patch("/trash-note/:id", trashNote);
+router.patch("/restore-note/:id", restoreNote);
+router.delete("/permanent-delete/:id", permanentDeleteNote);
 
 router.get("/get-notes", getAllNotes);
 router.get("/get-note/:id", getNoteById);
