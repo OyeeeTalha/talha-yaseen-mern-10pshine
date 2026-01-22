@@ -9,10 +9,28 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { UserAuth } from "@/hooks/userAuth";
 import { useNavigate } from "react-router-dom";
 import { useGetCategories, useDeleteCategory } from "@/hooks/useCategories";
+import { useGetProfile } from "@/hooks/useUser";
 
 type SidebarProps = {
   activeItem: string;
   onItemClick: (item: string) => void;
+};
+
+// Avatar URL mapping - using local avatars from public/icons/avatars
+const getAvatarUrl = (avatar?: string) => {
+  const avatarMap: Record<string, string> = {
+    "default-avatar-1": "/icons/avatars/man.png",
+    "default-avatar-2": "/icons/avatars/woman.png",
+    "default-avatar-3": "/icons/avatars/arab-woman.png",
+    "default-avatar-4": "/icons/avatars/doctor.png",
+    "default-avatar-5": "/icons/avatars/woman (1).png",
+    "default-avatar-6": "/icons/avatars/woman (2).png",
+    "default-avatar-7": "/icons/avatars/boy.png",
+    "default-avatar-8": "/icons/avatars/boy (1).png",
+  };
+  return (
+    avatarMap[avatar || "default-avatar-1"] || avatarMap["default-avatar-1"]
+  );
 };
 
 function Sidebar({ activeItem, onItemClick }: SidebarProps) {
@@ -20,6 +38,7 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
   const navigate = useNavigate();
   const { data: categoriesData } = useGetCategories();
   const { mutate: deleteCategory } = useDeleteCategory();
+  const { data: profileData } = useGetProfile();
 
   const [contextMenu, setContextMenu] = useState<{
     categoryId: string;
@@ -127,19 +146,26 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
   return (
     <div className="hidden md:flex flex-col w-[280px] h-full border-r border-white/5 bg-[#111a22] shrink-0 p-4 justify-start gap-10">
       <div className="w-full justify-between items-center gap-3 inline-flex">
-        <div className="absolute w-10 h-10 bg-sky-100 border-2 border-solid border-sky-600 flex justify-center items-center rounded-full">
+        <div
+          className="absolute w-10 h-10 border-2 border-solid border-sky-600 flex justify-center items-center rounded-full"
+          style={{
+            backgroundColor:
+              profileData?.data?.user?.avatarBgColor || "#60a5fa",
+          }}
+        >
           <img
-            src="https://pagedone.io/asset/uploads/1704277384.png"
-            alt="Bordered rounded avatar"
+            src={getAvatarUrl(profileData?.data?.user?.avatar)}
+            alt="Profile avatar"
+            className="w-full h-full object-cover rounded-full"
           />
           <span className="bottom-0 left-7 absolute  w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
         </div>
         <div className="relative flex flex-col items-start pl-14">
           <span className="text-white text-base font-semibold leading-tight line-clamp-1">
-            Muhammad Talha Yaseen
+            {profileData?.data?.user?.name || "User"}
           </span>
           <span className="text-text-secondary text-xs font-medium">
-            @oyeeTalha
+            @{profileData?.data?.user?.displayName || "user"}
           </span>
         </div>
       </div>
@@ -151,11 +177,12 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
+                  navigate("/dashboard");
                   onItemClick(item.name);
                 }}
               >
                 <div
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg group transition-all ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg group transition-all cursor-pointer ${
                     activeItem === item.name
                       ? "bg-primary/10 text-primary"
                       : "text-white hover:bg-white/5"
@@ -207,11 +234,12 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
+                      navigate("/dashboard");
                       onItemClick(category.name);
                     }}
                   >
                     <div
-                      className={`flex items-center gap-1 px-3 py-2.5 rounded-lg group transition-all ${
+                      className={`flex items-center gap-1 px-3 py-2.5 rounded-lg group transition-all cursor-pointer ${
                         activeItem === category.name
                           ? "bg-primary/10 text-primary"
                           : "text-white hover:bg-white/5"
@@ -249,8 +277,14 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
       <div className="w-full flex-col flex border-t border-white/5 mt-auto">
         <ul className="flex-col gap-1 flex">
           <li>
-            <a href="#">
-              <div className="p-3 rounded-lg items-center inline-flex">
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/profile");
+              }}
+            >
+              <div className="p-3 rounded-lg items-center inline-flex hover:bg-white/5 transition-colors cursor-pointer">
                 <div className="h-5 items-center gap-3 flex">
                   <div className="flex items-center justify-center text-primary ">
                     <SettingsRoundedIcon sx={{ fontSize: 20 }} />
