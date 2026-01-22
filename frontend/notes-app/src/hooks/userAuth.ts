@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { signout, getSession } from "@/services/authService";
 import { useNavigate } from "react-router-dom";
+import { setUserContext, clearUserContext, logger } from "@/lib/logger";
+import { useEffect } from "react";
 
 export const UserAuth = () => {
   const navigate = useNavigate();
@@ -17,9 +19,19 @@ export const UserAuth = () => {
 
   const queryClient = useQueryClient();
 
+  // Set user context in logger when user data is available
+  useEffect(() => {
+    if (user?.id) {
+      setUserContext(user.id, user.email);
+      logger.info({ msg: "User authenticated", userId: user.id });
+    }
+  }, [user]);
+
   const signoutMutation = useMutation({
     mutationFn: signout,
     onSuccess: () => {
+      clearUserContext();
+      logger.info({ msg: "User logged out" });
       queryClient.setQueryData(["user-session"], null);
       navigate("/");
     },

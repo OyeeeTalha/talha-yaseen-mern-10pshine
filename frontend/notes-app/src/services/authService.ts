@@ -1,16 +1,26 @@
+import {
+  logger,
+  logApiRequest,
+  logApiResponse,
+  logApiError,
+} from "@/lib/logger";
+
 const API_URL = import.meta.env.VITE_API_URL;
 const APP_URL = import.meta.env.VITE_APP_URL;
 
 const fetchCsrfToken = async () => {
   try {
+    logApiRequest("GET", `${API_URL}/auth/csrf`);
     const csrfResponse = await fetch(`${API_URL}/auth/csrf`, {
       credentials: "include",
     });
+    logApiResponse("GET", `${API_URL}/auth/csrf`, csrfResponse.status);
+
     const data = await csrfResponse.json();
-    console.log("CSRF Token received:", data.csrfToken);
+    logger.debug({ msg: "CSRF token received", hasToken: !!data.csrfToken });
     return data.csrfToken;
   } catch (error) {
-    console.error("Error fetching CSRF token:", error);
+    logApiError("GET", `${API_URL}/auth/csrf`, error as Error);
     throw error;
   }
 };
@@ -24,6 +34,11 @@ export const signout = async () => {
     formData.append("callbackUrl", `${API_URL}/auth/session`);
     formData.append("json", "true");
 
+    logApiRequest(
+      "POST",
+      `${API_URL}/auth/signout`,
+      Object.fromEntries(formData),
+    );
     const response = await fetch(`${API_URL}/auth/signout`, {
       method: "POST",
       credentials: "include",
@@ -32,21 +47,26 @@ export const signout = async () => {
       },
       body: formData.toString(),
     });
+    logApiResponse("POST", `${API_URL}/auth/signout`, response.status);
+
     return await response.json();
   } catch (error) {
-    console.error("Error during sign-out:", error);
+    logApiError("POST", `${API_URL}/auth/signout`, error as Error);
     throw error;
   }
 };
 
 export const getSession = async () => {
   try {
+    logApiRequest("GET", `${API_URL}/auth/session`);
     const response = await fetch(`${API_URL}/auth/session`, {
       credentials: "include",
     });
+    logApiResponse("GET", `${API_URL}/auth/session`, response.status);
+
     return await response.json();
   } catch (error) {
-    console.error("Error fetching session:", error);
+    logApiError("GET", `${API_URL}/auth/session`, error as Error);
     throw error;
   }
 };
@@ -73,10 +93,12 @@ export const handleGoogleSignIn = async () => {
     form.appendChild(callbackInput);
 
     document.body.appendChild(form);
+
+    logger.info({ msg: "Initiating Google sign-in" });
     form.submit();
 
     document.body.removeChild(form);
   } catch (error) {
-    console.error("Sign in failed:", error);
+    logger.error({ msg: "Google sign-in failed", error });
   }
 };
