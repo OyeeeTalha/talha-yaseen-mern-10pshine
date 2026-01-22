@@ -18,6 +18,7 @@ import {
   useUnpinNote,
 } from "@/hooks/useNotes";
 import { useGetCategories } from "@/hooks/useCategories";
+import { useGetProfile } from "@/hooks/useUser";
 import Loading from "@/components/ui/loading";
 import { formatDate } from "@/lib/utils";
 
@@ -41,11 +42,19 @@ function Dashboard() {
 
   // Hooks
   const { data: notes = [], isLoading } = useGetAllNotes();
+  const { data: profileData } = useGetProfile();
   useGetCategories(); // Prefetch categories for sidebar
   const { mutate: createNote, isPending } = useCreateNote();
   const { mutate: deleteNote } = useDeleteNote();
   const { mutate: pinNote } = usePinNote();
   const { mutate: unpinNote } = useUnpinNote();
+
+  // Get user's display name or first name, fallback to name or "User"
+  const userName =
+    profileData?.data?.user?.displayName ||
+    profileData?.data?.user?.firstName ||
+    profileData?.data?.user?.name?.split(" ")[0] ||
+    "User";
 
   const handleCreateNote = () => {
     createNote(
@@ -139,7 +148,7 @@ function Dashboard() {
         <header className="h-20 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0">
           <div className="flex flex-col justify-center">
             <h1 className="text-2xl font-semibold text-white">
-              {getGreeting()}, Talha
+              {getGreeting()}, {userName}
             </h1>
             <p className="text-gray-400 text-sm mt-1">Capture your ideas</p>
           </div>
