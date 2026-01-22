@@ -39,6 +39,11 @@ const notesSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    trashedAt: {
+      type: Number, // Unix timestamp in seconds
+      required: false,
+      default: null,
+    },
     isDeleted: {
       type: Boolean,
       default: false,
