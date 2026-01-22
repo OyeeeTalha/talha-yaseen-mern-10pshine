@@ -31,6 +31,10 @@ const notesSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isFavorite: {
+      type: Boolean,
+      default: false,
+    },
     isTrash: {
       type: Boolean,
       default: false,

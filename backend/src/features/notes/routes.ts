@@ -9,6 +9,8 @@ import {
   getNotesByCategory,
   pinNote,
   unpinNote,
+  favoriteNote,
+  unfavoriteNote,
   createCategory,
   getCategories,
   deleteCategory,
@@ -30,6 +32,9 @@ router.get("/get-notes-by-category/:category", getNotesByCategory);
 
 router.patch("/pin-note/:id", pinNote);
 router.patch("/unpin-note/:id", unpinNote);
+
+router.patch("/favorite-note/:id", favoriteNote);
+router.patch("/unfavorite-note/:id", unfavoriteNote);
 
 // router.get("/pinned-notes", (req: Request, res: Response) => {
 //   // Logic to get all pinned notes
