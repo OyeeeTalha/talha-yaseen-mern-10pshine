@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
 import PushPinRoundedIcon from "@mui/icons-material/PushPinRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import StarBorderRoundedIcon from "@mui/icons-material/StarBorderRounded";
 import { getDeterministicColor } from "@/lib/utils";
 
 type NoteCardProps = {
@@ -9,11 +11,13 @@ type NoteCardProps = {
   content: string;
   date: string;
   isPinned?: boolean;
+  isFavorite?: boolean;
   categoryId?: string | null;
   categoryName?: string;
   categoryIndex?: number | null; // For color generation
   viewMode?: "grid" | "list"; // New prop for view mode
   onPinClick?: () => void;
+  onFavoriteClick?: () => void;
   onDelete?: () => void;
   onClick?: () => void;
 };
@@ -24,11 +28,13 @@ function NoteCard(props: NoteCardProps) {
     content,
     date,
     isPinned,
+    isFavorite,
     categoryId,
     categoryName,
     categoryIndex,
     viewMode = "grid", // Default to grid view
     onPinClick,
+    onFavoriteClick,
     onDelete,
     onClick,
   } = props;
@@ -181,6 +187,22 @@ function NoteCard(props: NoteCardProps) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                onFavoriteClick?.();
+                setShowMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+            >
+              {isFavorite ? (
+                <StarRoundedIcon sx={{ fontSize: 18, color: "#fbbf24" }} />
+              ) : (
+                <StarBorderRoundedIcon sx={{ fontSize: 18 }} />
+              )}
+              <span>{isFavorite ? "Unfavorite" : "Favorite"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
                 onDelete?.();
                 setShowMenu(false);
               }}
@@ -292,6 +314,22 @@ function NoteCard(props: NoteCardProps) {
           >
             <PushPinRoundedIcon sx={{ fontSize: 18 }} />
             <span>{isPinned ? "Unpin" : "Pin"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFavoriteClick?.();
+              setShowMenu(false);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+          >
+            {isFavorite ? (
+              <StarRoundedIcon sx={{ fontSize: 18, color: "#fbbf24" }} />
+            ) : (
+              <StarBorderRoundedIcon sx={{ fontSize: 18 }} />
+            )}
+            <span>{isFavorite ? "Unfavorite" : "Favorite"}</span>
           </button>
           <button
             type="button"

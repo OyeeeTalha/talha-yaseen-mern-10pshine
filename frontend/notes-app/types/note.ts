@@ -15,6 +15,7 @@ export interface Note {
   categoryIndex?: number | null; // Category index for color generation
   tags?: string[];
   isPinned?: boolean;
+  isFavorite?: boolean;
   isTrash?: boolean;
   isDeleted?: boolean;
   createdAt?: Date | string;
