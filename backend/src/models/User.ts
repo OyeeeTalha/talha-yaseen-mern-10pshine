@@ -1,4 +1,20 @@
-import { Schema, model, InferSchemaType } from "mongoose";
+import { Schema, model, InferSchemaType, Types } from "mongoose";
+
+const categorySchema = new Schema(
+  {
+    id: {
+      type: Schema.Types.ObjectId,
+      default: () => new Types.ObjectId(),
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { _id: false },
+);
 
 const userSchema = new Schema(
   {
@@ -20,14 +36,35 @@ const userSchema = new Schema(
       required: true,
       trim: true,
     },
+    catagories: {
+      type: [categorySchema],
+      default: function () {
+        return [
+          {
+            id: new Types.ObjectId(),
+            name: "Void",
+          },
+        ];
+      },
+    },
     isDeleted: {
       type: Boolean,
       default: false,
     },
+    // OAuth tokens
+    accessToken: {
+      type: String,
+    },
+    refreshToken: {
+      type: String,
+    },
+    tokenExpiresAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export type User = InferSchemaType<typeof userSchema>;

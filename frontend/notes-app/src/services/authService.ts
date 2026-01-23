@@ -1,34 +1,38 @@
-import axios from "axios";
-
 const API_URL = import.meta.env.VITE_API_URL;
 const APP_URL = import.meta.env.VITE_APP_URL;
 
 const fetchCsrfToken = async () => {
   try {
-    const csrfResponse = await axios.get(`${API_URL}/csrf`, {
-      withCredentials: true,
+    const csrfResponse = await fetch(`${API_URL}/auth/csrf`, {
+      credentials: "include",
     });
-    const csrfToken = csrfResponse.data.csrfToken;
-    console.log("CSRF Token received:", csrfToken);
-    return csrfToken;
+    const data = await csrfResponse.json();
+    console.log("CSRF Token received:", data.csrfToken);
+    return data.csrfToken;
   } catch (error) {
     console.error("Error fetching CSRF token:", error);
     throw error;
   }
 };
+
 export const signout = async () => {
   try {
     const csrfToken = await fetchCsrfToken();
 
     const formData = new URLSearchParams();
     formData.append("csrfToken", csrfToken);
-    formData.append("callbackUrl", `${API_URL}/session`);
+    formData.append("callbackUrl", `${API_URL}/auth/session`);
     formData.append("json", "true");
 
-    const response = await axios.post(`${API_URL}/signout`, formData, {
-      withCredentials: true,
+    const response = await fetch(`${API_URL}/auth/signout`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
     });
-    return response.data;
+    return await response.json();
   } catch (error) {
     console.error("Error during sign-out:", error);
     throw error;
@@ -37,10 +41,10 @@ export const signout = async () => {
 
 export const getSession = async () => {
   try {
-    const response = await axios.get(`${API_URL}/session`, {
-      withCredentials: true,
+    const response = await fetch(`${API_URL}/auth/session`, {
+      credentials: "include",
     });
-    return response.data;
+    return await response.json();
   } catch (error) {
     console.error("Error fetching session:", error);
     throw error;
@@ -54,7 +58,7 @@ export const handleGoogleSignIn = async () => {
     const form = document.createElement("form");
     form.method = "POST";
 
-    form.action = `${API_URL}/signin`;
+    form.action = `${API_URL}/auth/signin`;
 
     const csrfInput = document.createElement("input");
     csrfInput.type = "hidden";
