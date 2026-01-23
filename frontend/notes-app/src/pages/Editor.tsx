@@ -17,6 +17,10 @@ import Loading from "@/components/ui/loading";
 import { useToast } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/ui/toast";
 import { logger } from "@/lib/logger";
+import { socketService } from "@/services/socketService";
+import { debounce } from "@/lib/utils";
+
+type AutosaveStatus = "idle" | "saving" | "saved" | "error" | "offline";
 
 function Editor() {
   const { noteId } = useParams<{ noteId: string }>();
@@ -27,6 +31,9 @@ function Editor() {
   const [tagInput, setTagInput] = useState("");
   const [activeSidebarItem, setActiveSidebarItem] = useState("All Notes");
   const [isSaving, setIsSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isContentLoaded, setIsContentLoaded] = useState(false);
 
   // Toast hook
   const { toasts, hideToast, success, error: showError } = useToast();
@@ -83,10 +90,166 @@ function Editor() {
   useEffect(() => {
     if (editor && parsedContent) {
       editor.replaceBlocks(editor.document, parsedContent);
+      // Mark content as loaded after a short delay
+      setTimeout(() => setIsContentLoaded(true), 100);
     }
   }, [editor, parsedContent]);
 
-  // Save Function
+  // Debounced autosave function
+  const triggerAutosave = useMemo(
+    () =>
+      debounce(() => {
+        // Don't autosave during initial load
+        if (!noteId || !editor || !isContentLoaded) return;
+
+        setAutosaveStatus("saving");
+
+        const payload = {
+          noteId,
+          title,
+          content: JSON.stringify(editor.document),
+          category: selectedCategoryId,
+          tags,
+        };
+
+        socketService.autosave(
+          payload,
+          (data) => {
+            setAutosaveStatus("saved");
+            setLastSavedAt(data.timestamp);
+            logger.info({ msg: "Autosave complete", noteId });
+
+            // DON'T invalidate cache - it causes content reload and adds new lines
+            // The autosave already updated the backend, no need to refetch
+          },
+          (error) => {
+            setAutosaveStatus("error");
+            logger.error({ msg: "Autosave failed", error });
+            showError(`Autosave failed: ${error}`);
+          },
+        );
+      }, 2000),
+    [
+      noteId,
+      editor,
+      title,
+      selectedCategoryId,
+      tags,
+      isContentLoaded,
+      showError,
+    ],
+  );
+
+  // Initialize WebSocket and autosave
+  useEffect(() => {
+    if (!noteId) return;
+
+    // Connect to WebSocket
+    socketService.connect();
+
+    // Join note room
+    socketService.joinNote(
+      noteId,
+      () => {
+        logger.info({ msg: "Joined note room", noteId });
+        setAutosaveStatus("idle");
+      },
+      (error) => {
+        logger.error({ msg: "Failed to join note room", error });
+        setAutosaveStatus("error");
+        showError("Failed to connect for autosave");
+      },
+    );
+
+    // Cleanup on unmount or note change
+    return () => {
+      // Save immediately using synchronous method (doesn't wait for async)
+      if (editor) {
+        const finalPayload = {
+          noteId,
+          title,
+          content: JSON.stringify(editor.document),
+          category: selectedCategoryId,
+          tags,
+        };
+
+        // Use sync save for immediate effect
+        socketService.saveSync(finalPayload);
+
+        // Also trigger socket leave
+        socketService.leaveNote(finalPayload);
+      }
+    };
+  }, [noteId, editor, title, selectedCategoryId, tags, showError]);
+
+  // Handle browser close, refresh, or tab close
+  useEffect(() => {
+    if (!noteId || !editor) return;
+
+    const handleBeforeUnload = () => {
+      // Use synchronous save for page unload (Beacon API)
+      const finalPayload = {
+        noteId,
+        title,
+        content: JSON.stringify(editor.document),
+        category: selectedCategoryId,
+        tags,
+      };
+
+      socketService.saveSync(finalPayload);
+      socketService.leaveNote(finalPayload);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [noteId, editor, title, selectedCategoryId, tags]);
+
+  // Trigger autosave when content or metadata changes
+  useEffect(() => {
+    if (!noteId || !editor) return;
+
+    const handleContentChange = () => {
+      setAutosaveStatus("idle");
+      triggerAutosave();
+    };
+
+    // Listen to editor changes
+    editor.onChange(handleContentChange);
+
+    return () => {
+      // Cleanup
+    };
+  }, [editor, noteId, triggerAutosave]);
+
+  // Trigger autosave when title, category, or tags change
+  useEffect(() => {
+    // Don't autosave on initial mount
+    if (!noteId || !isContentLoaded) return;
+    triggerAutosave();
+  }, [
+    title,
+    selectedCategoryId,
+    tags,
+    noteId,
+    isContentLoaded,
+    triggerAutosave,
+  ]);
+
+  // Monitor connection status
+  useEffect(() => {
+    const checkConnection = setInterval(() => {
+      if (!socketService.isConnected() && noteId) {
+        setAutosaveStatus("offline");
+      }
+    }, 5000);
+
+    return () => clearInterval(checkConnection);
+  }, [noteId]);
+
+  // Save Function (Manual Save)
   const handleSave = async () => {
     if (!noteId) return;
 
@@ -195,16 +358,64 @@ function Editor() {
         <header className="h-16 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0 bg-[#0d1117]">
           <div className="flex items-center gap-4">
             <Button
-              onClick={() => navigate("/dashboard")}
+              onClick={async () => {
+                // Save synchronously before navigating
+                if (editor && noteId) {
+                  const payload = {
+                    noteId,
+                    title,
+                    content: JSON.stringify(editor.document),
+                    category: selectedCategoryId,
+                    tags,
+                  };
+
+                  // Send sync save (Beacon API)
+                  socketService.saveSync(payload);
+
+                  // Also send socket leave message
+                  socketService.leaveNote(payload);
+
+                  // Small delay to ensure messages are sent
+                  await new Promise((resolve) => setTimeout(resolve, 100));
+                }
+
+                // Now navigate
+                navigate("/dashboard");
+              }}
               className="text-gray-400 hover:text-white transition-colors"
             >
               <ArrowBackRoundedIcon />
             </Button>
-            <span className="text-sm text-gray-500">
-              {noteData?.updatedAt
-                ? `Last edited ${new Date(noteData.updatedAt).toLocaleString()}`
-                : "New note"}
-            </span>
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-500">
+                {noteData?.updatedAt
+                  ? `Last edited ${new Date(noteData.updatedAt).toLocaleString()}`
+                  : "New note"}
+              </span>
+              {/* Autosave Status Indicator */}
+              {autosaveStatus !== "idle" && (
+                <span
+                  className={`text-xs ${
+                    autosaveStatus === "saving"
+                      ? "text-yellow-400"
+                      : autosaveStatus === "saved"
+                        ? "text-green-400"
+                        : autosaveStatus === "offline"
+                          ? "text-orange-400"
+                          : "text-red-400"
+                  }`}
+                >
+                  {autosaveStatus === "saving" && "Saving..."}
+                  {autosaveStatus === "saved" &&
+                    (lastSavedAt
+                      ? `Saved at ${new Date(lastSavedAt).toLocaleTimeString()}`
+                      : "Saved")}
+                  {autosaveStatus === "offline" &&
+                    "Offline - will save when reconnected"}
+                  {autosaveStatus === "error" && "Autosave error"}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -214,7 +425,7 @@ function Editor() {
             >
               <SaveRoundedIcon sx={{ fontSize: 18 }} />
               <span>
-                {isSaving || updateNote.isPending ? "Saving..." : "Save"}
+                {isSaving || updateNote.isPending ? "Saving..." : "Save Now"}
               </span>
             </button>
           </div>

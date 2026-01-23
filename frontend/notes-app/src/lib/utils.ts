@@ -128,3 +128,49 @@ export const calculateTimeRemaining = (
     formattedTime,
   };
 };
+
+export function debounce<T extends (...args: unknown[]) => void>(
+  func: T,
+  delay: number,
+): ((...args: Parameters<T>) => void) & {
+  flush: () => void;
+  cancel: () => void;
+} {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let lastArgs: Parameters<T> | null = null;
+
+  const debouncedFunc = (...args: Parameters<T>) => {
+    lastArgs = args;
+
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    timeoutId = setTimeout(() => {
+      func(...args);
+      timeoutId = null;
+      lastArgs = null;
+    }, delay);
+  };
+
+  // Immediately execute pending function
+  debouncedFunc.flush = () => {
+    if (timeoutId && lastArgs) {
+      clearTimeout(timeoutId);
+      func(...lastArgs);
+      timeoutId = null;
+      lastArgs = null;
+    }
+  };
+
+  // Cancel pending execution
+  debouncedFunc.cancel = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+      lastArgs = null;
+    }
+  };
+
+  return debouncedFunc;
+}
