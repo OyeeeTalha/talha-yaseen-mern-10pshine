@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { TRASH_PERIOD_SECONDS } from "../config/trash.config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -75,4 +76,55 @@ export const formatDate = (dateString?: string | Date): string => {
   if (diffDays < 7) return `${diffDays}d ago`;
 
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+
+export const calculateTimeRemaining = (
+  trashedAt: number,
+): {
+  isExpired: boolean;
+  daysLeft: number;
+  hoursLeft: number;
+  minutesLeft: number;
+  secondsLeft: number;
+  formattedTime: string;
+} => {
+  const currentTime = Math.floor(Date.now() / 1000);
+  const deleteAt = trashedAt + TRASH_PERIOD_SECONDS;
+  const secondsRemaining = deleteAt - currentTime;
+
+  if (secondsRemaining <= 0) {
+    return {
+      isExpired: true,
+      daysLeft: 0,
+      hoursLeft: 0,
+      minutesLeft: 0,
+      secondsLeft: 0,
+      formattedTime: "Expired",
+    };
+  }
+
+  const daysLeft = Math.floor(secondsRemaining / 86400);
+  const hoursLeft = Math.floor((secondsRemaining % 86400) / 3600);
+  const minutesLeft = Math.floor((secondsRemaining % 3600) / 60);
+  const secondsLeft = secondsRemaining % 60;
+
+  let formattedTime = "";
+  if (daysLeft > 0) {
+    formattedTime = `${daysLeft}d ${hoursLeft}h`;
+  } else if (hoursLeft > 0) {
+    formattedTime = `${hoursLeft}h ${minutesLeft}m`;
+  } else if (minutesLeft > 0) {
+    formattedTime = `${minutesLeft}m ${secondsLeft}s`;
+  } else {
+    formattedTime = `${secondsLeft}s`;
+  }
+
+  return {
+    isExpired: false,
+    daysLeft,
+    hoursLeft,
+    minutesLeft,
+    secondsLeft,
+    formattedTime,
+  };
 };

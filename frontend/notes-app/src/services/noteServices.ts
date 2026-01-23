@@ -114,6 +114,35 @@ export const unfavoriteNote = async (id: string): Promise<NoteResponse> => {
   return await response.json();
 };
 
+export const trashNote = async (id: string): Promise<NoteResponse> => {
+  const response = await fetch(`${VITE_API_URL}/notes/trash-note/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Failed to trash note");
+  return await response.json();
+};
+
+export const restoreNote = async (id: string): Promise<NoteResponse> => {
+  const response = await fetch(`${VITE_API_URL}/notes/restore-note/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Failed to restore note");
+  return await response.json();
+};
+
+export const permanentDeleteNote = async (
+  id: string,
+): Promise<{ status: string; message: string }> => {
+  const response = await fetch(`${VITE_API_URL}/notes/permanent-delete/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Failed to permanently delete note");
+  return await response.json();
+};
+
 // ============= CATEGORY SERVICES =============
 
 export const createCategory = async (categoryData: {

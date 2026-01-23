@@ -381,6 +381,114 @@ export function useUnfavoriteNote() {
   });
 }
 
+// Trash Note
+export function useTrashNote() {
+  const queryClient = useQueryClient();
+  const setError = useNoteStore((state) => state.setError);
+
+  return useMutation({
+    mutationFn: noteService.trashNote,
+    onMutate: async (noteId) => {
+      await queryClient.cancelQueries({ queryKey: noteKeys.lists() });
+      const previousNotes = queryClient.getQueryData(noteKeys.lists());
+
+      const trashedAt = Math.floor(Date.now() / 1000);
+      queryClient.setQueryData(noteKeys.lists(), (old: Note[] | undefined) => {
+        if (!old) return old;
+        return old.map((note) =>
+          note._id === noteId
+            ? {
+                ...note,
+                isTrash: true,
+                trashedAt,
+                isPinned: false,
+                isFavorite: false,
+              }
+            : note,
+        );
+      });
+
+      return { previousNotes };
+    },
+    onError: (error: Error, _, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
+      }
+      setError(error.message);
+      alert(`Failed to trash note: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() });
+    },
+  });
+}
+
+// Restore Note
+export function useRestoreNote() {
+  const queryClient = useQueryClient();
+  const setError = useNoteStore((state) => state.setError);
+
+  return useMutation({
+    mutationFn: noteService.restoreNote,
+    onMutate: async (noteId) => {
+      await queryClient.cancelQueries({ queryKey: noteKeys.lists() });
+      const previousNotes = queryClient.getQueryData(noteKeys.lists());
+
+      queryClient.setQueryData(noteKeys.lists(), (old: Note[] | undefined) => {
+        if (!old) return old;
+        return old.map((note) =>
+          note._id === noteId
+            ? { ...note, isTrash: false, trashedAt: null }
+            : note,
+        );
+      });
+
+      return { previousNotes };
+    },
+    onError: (error: Error, _, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
+      }
+      setError(error.message);
+      alert(`Failed to restore note: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() });
+    },
+  });
+}
+
+// Permanent Delete Note
+export function usePermanentDeleteNote() {
+  const queryClient = useQueryClient();
+  const setError = useNoteStore((state) => state.setError);
+
+  return useMutation({
+    mutationFn: noteService.permanentDeleteNote,
+    onMutate: async (noteId) => {
+      await queryClient.cancelQueries({ queryKey: noteKeys.lists() });
+      const previousNotes = queryClient.getQueryData(noteKeys.lists());
+
+      queryClient.setQueryData(noteKeys.lists(), (old: Note[] | undefined) => {
+        if (!old) return old;
+        return old.filter((note) => note._id !== noteId);
+      });
+
+      return { previousNotes };
+    },
+    onError: (error: Error, _, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
+      }
+      setError(error.message);
+      alert(`Failed to permanently delete note: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() });
+    },
+  });
+}
+
 // Assign Category to Note
 // Assign Category to Note
 export function useAssignNoteCategory() {

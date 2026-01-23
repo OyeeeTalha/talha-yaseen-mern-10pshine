@@ -4,7 +4,9 @@ import PushPinRoundedIcon from "@mui/icons-material/PushPinRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import StarBorderRoundedIcon from "@mui/icons-material/StarBorderRounded";
-import { getDeterministicColor } from "@/lib/utils";
+import RestoreFromTrashRoundedIcon from "@mui/icons-material/RestoreFromTrashRounded";
+import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
+import { getDeterministicColor, calculateTimeRemaining } from "@/lib/utils";
 
 type NoteCardProps = {
   title: string;
@@ -12,13 +14,17 @@ type NoteCardProps = {
   date: string;
   isPinned?: boolean;
   isFavorite?: boolean;
+  isTrash?: boolean;
+  trashedAt?: number | null;
   categoryId?: string | null;
   categoryName?: string;
   categoryIndex?: number | null; // For color generation
   viewMode?: "grid" | "list"; // New prop for view mode
   onPinClick?: () => void;
   onFavoriteClick?: () => void;
+  onRestore?: () => void;
   onDelete?: () => void;
+  onAutoDelete?: () => void; // For automatic deletion without confirmation
   onClick?: () => void;
 };
 
@@ -29,18 +35,43 @@ function NoteCard(props: NoteCardProps) {
     date,
     isPinned,
     isFavorite,
+    isTrash,
+    trashedAt,
     categoryId,
     categoryName,
     categoryIndex,
     viewMode = "grid", // Default to grid view
     onPinClick,
     onFavoriteClick,
+    onRestore,
     onDelete,
+    onAutoDelete,
     onClick,
   } = props;
   const [showMenu, setShowMenu] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Update timer for trashed notes
+  useEffect(() => {
+    if (isTrash && trashedAt) {
+      const updateTimer = () => {
+        const { formattedTime, isExpired } = calculateTimeRemaining(trashedAt);
+        setTimeRemaining(formattedTime);
+
+        // Auto-delete when expired (without confirmation)
+        if (isExpired) {
+          onAutoDelete?.();
+        }
+      };
+
+      updateTimer(); // Initial update
+      const interval = setInterval(updateTimer, 1000); // Update every second
+
+      return () => clearInterval(interval);
+    }
+  }, [isTrash, trashedAt, onAutoDelete]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -171,46 +202,77 @@ function NoteCard(props: NoteCardProps) {
             className="absolute top-12 right-5 w-40 bg-gray-800 border border-white/10 rounded-lg shadow-xl shadow-black/50 z-9999"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPinClick?.();
-                setShowMenu(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
-            >
-              <PushPinRoundedIcon sx={{ fontSize: 18 }} />
-              <span>{isPinned ? "Unpin" : "Pin"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFavoriteClick?.();
-                setShowMenu(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
-            >
-              {isFavorite ? (
-                <StarRoundedIcon sx={{ fontSize: 18, color: "#fbbf24" }} />
-              ) : (
-                <StarBorderRoundedIcon sx={{ fontSize: 18 }} />
-              )}
-              <span>{isFavorite ? "Unfavorite" : "Favorite"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.();
-                setShowMenu(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-            >
-              <DeleteRoundedIcon sx={{ fontSize: 18 }} />
-              <span>Delete</span>
-            </button>
+            {isTrash ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRestore?.();
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-500/10 transition-colors"
+                >
+                  <RestoreFromTrashRoundedIcon sx={{ fontSize: 18 }} />
+                  <span>Restore</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.();
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <DeleteForeverRoundedIcon sx={{ fontSize: 18 }} />
+                  <span>Permanent</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPinClick?.();
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+                >
+                  <PushPinRoundedIcon sx={{ fontSize: 18 }} />
+                  <span>{isPinned ? "Unpin" : "Pin"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFavoriteClick?.();
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+                >
+                  {isFavorite ? (
+                    <StarRoundedIcon sx={{ fontSize: 18, color: "#fbbf24" }} />
+                  ) : (
+                    <StarBorderRoundedIcon sx={{ fontSize: 18 }} />
+                  )}
+                  <span>{isFavorite ? "Unfavorite" : "Favorite"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.();
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <DeleteRoundedIcon sx={{ fontSize: 18 }} />
+                  <span>Move to Trash</span>
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -262,34 +324,44 @@ function NoteCard(props: NoteCardProps) {
         {/* Footer Section - Fixed at bottom */}
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
           <div className="flex gap-2 flex-wrap items-center">
-            {/* Category Badge */}
-            {categoryName &&
-            categoryId !== null &&
-            categoryId !== undefined &&
-            categoryName.toLowerCase() !== "void" &&
-            categoryIndex !== null &&
-            categoryIndex !== undefined ? (
-              <span
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border"
-                style={{
-                  backgroundColor: `${getDeterministicColor(categoryIndex)}15`,
-                  borderColor: `${getDeterministicColor(categoryIndex)}40`,
-                  color: getDeterministicColor(categoryIndex),
-                }}
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{
-                    backgroundColor: getDeterministicColor(categoryIndex),
-                  }}
-                ></span>
-                {categoryName}
+            {/* Timer for trashed notes */}
+            {isTrash && trashedAt ? (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-red-700/40 bg-red-800/20 text-red-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                Deletes in {timeRemaining}
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-700/40 bg-gray-800/30 text-gray-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
-                Void
-              </span>
+              <>
+                {/* Category Badge */}
+                {categoryName &&
+                categoryId !== null &&
+                categoryId !== undefined &&
+                categoryName.toLowerCase() !== "void" &&
+                categoryIndex !== null &&
+                categoryIndex !== undefined ? (
+                  <span
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border"
+                    style={{
+                      backgroundColor: `${getDeterministicColor(categoryIndex)}15`,
+                      borderColor: `${getDeterministicColor(categoryIndex)}40`,
+                      color: getDeterministicColor(categoryIndex),
+                    }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{
+                        backgroundColor: getDeterministicColor(categoryIndex),
+                      }}
+                    ></span>
+                    {categoryName}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-700/40 bg-gray-800/30 text-gray-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+                    Void
+                  </span>
+                )}
+              </>
             )}
           </div>
           <span className="text-xs text-gray-500 shrink-0">{date}</span>
@@ -303,46 +375,77 @@ function NoteCard(props: NoteCardProps) {
           className="absolute top-12 right-5 w-40 bg-gray-800 border border-white/10 rounded-lg shadow-xl shadow-black/50 z-9999"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPinClick?.();
-              setShowMenu(false);
-            }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
-          >
-            <PushPinRoundedIcon sx={{ fontSize: 18 }} />
-            <span>{isPinned ? "Unpin" : "Pin"}</span>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onFavoriteClick?.();
-              setShowMenu(false);
-            }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
-          >
-            {isFavorite ? (
-              <StarRoundedIcon sx={{ fontSize: 18, color: "#fbbf24" }} />
-            ) : (
-              <StarBorderRoundedIcon sx={{ fontSize: 18 }} />
-            )}
-            <span>{isFavorite ? "Unfavorite" : "Favorite"}</span>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete?.();
-              setShowMenu(false);
-            }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            <DeleteRoundedIcon sx={{ fontSize: 18 }} />
-            <span>Delete</span>
-          </button>
+          {isTrash ? (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestore?.();
+                  setShowMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-500/10 transition-colors"
+              >
+                <RestoreFromTrashRoundedIcon sx={{ fontSize: 18 }} />
+                <span>Restore</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.();
+                  setShowMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <DeleteForeverRoundedIcon sx={{ fontSize: 18 }} />
+                <span>Permanent</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPinClick?.();
+                  setShowMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+              >
+                <PushPinRoundedIcon sx={{ fontSize: 18 }} />
+                <span>{isPinned ? "Unpin" : "Pin"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFavoriteClick?.();
+                  setShowMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+              >
+                {isFavorite ? (
+                  <StarRoundedIcon sx={{ fontSize: 18, color: "#fbbf24" }} />
+                ) : (
+                  <StarBorderRoundedIcon sx={{ fontSize: 18 }} />
+                )}
+                <span>{isFavorite ? "Unfavorite" : "Favorite"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.();
+                  setShowMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <DeleteRoundedIcon sx={{ fontSize: 18 }} />
+                <span>Move to Trash</span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
