@@ -36,6 +36,31 @@ const userSchema = new Schema(
       required: true,
       trim: true,
     },
+    displayName: {
+      type: String,
+      trim: true,
+    },
+    firstName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    avatar: {
+      type: String,
+      default: "default-avatar-1",
+    },
+    avatarBgColor: {
+      type: String,
+      default: "#60a5fa",
+    },
     catagories: {
       type: [categorySchema],
       default: function () {

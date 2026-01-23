@@ -35,11 +35,23 @@ export const authConfig = {
           };
         }
 
+        // Extract displayName from email (everything before @)
+        const emailUsername = user.email.split("@")[0];
+
+        // Try to split name into first and last name
+        const nameParts = (user.name || "").trim().split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+
         // Create user in your UserModel with your schema
         const newUser = await UserModel.create({
           googleId,
           email: user.email,
           name: user.name,
+          displayName: emailUsername,
+          firstName,
+          lastName,
+          avatar: "default-avatar-1",
           catagories: [], // Initialize with empty categories
           isDeleted: false,
         });
@@ -91,7 +103,7 @@ export const authConfig = {
                   : null,
               },
             },
-            { upsert: false }
+            { upsert: false },
           );
 
           logger.info(`Tokens stored for user: ${user.email}`);
@@ -111,6 +123,12 @@ export const authConfig = {
 
         if (dbUser) {
           session.user.id = dbUser._id.toString();
+          session.user.displayName = dbUser.displayName;
+          session.user.firstName = dbUser.firstName;
+          session.user.lastName = dbUser.lastName;
+          session.user.bio = dbUser.bio;
+          session.user.avatar = dbUser.avatar;
+          session.user.avatarBgColor = dbUser.avatarBgColor;
           session.user.categories = dbUser.catagories;
           session.user.isDeleted = dbUser.isDeleted;
           // Don't expose tokens in session for security
