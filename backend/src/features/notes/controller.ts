@@ -295,6 +295,58 @@ export const unpinNote = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+export const favoriteNote = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = res.locals.session?.user?.id;
+
+  if (!userId) {
+    throw new AppError("You must be logged in to update a note", 401);
+  }
+
+  const note = await NoteModel.findOneAndUpdate(
+    { _id: id, userId: userId },
+    { isFavorite: true },
+    { new: true },
+  );
+
+  if (!note) {
+    throw new AppError("Note not found", 404);
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Note added to favorites successfully",
+    data: { note },
+  });
+});
+
+export const unfavoriteNote = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const userId = res.locals.session?.user?.id;
+
+    if (!userId) {
+      throw new AppError("You must be logged in to update a note", 401);
+    }
+
+    const note = await NoteModel.findOneAndUpdate(
+      { _id: id, userId: userId },
+      { isFavorite: false },
+      { new: true },
+    );
+
+    if (!note) {
+      throw new AppError("Note not found", 404);
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Note removed from favorites successfully",
+      data: { note },
+    });
+  },
+);
+
 export const createCategory = catchAsync(
   async (req: Request, res: Response) => {
     const validation = createCategorySchema.safeParse(req.body);
