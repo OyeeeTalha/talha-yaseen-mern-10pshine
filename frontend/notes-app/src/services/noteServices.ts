@@ -96,6 +96,24 @@ export const unpinNote = async (id: string): Promise<NoteResponse> => {
   return await response.json();
 };
 
+export const favoriteNote = async (id: string): Promise<NoteResponse> => {
+  const response = await fetch(`${VITE_API_URL}/notes/favorite-note/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Failed to favorite note");
+  return await response.json();
+};
+
+export const unfavoriteNote = async (id: string): Promise<NoteResponse> => {
+  const response = await fetch(`${VITE_API_URL}/notes/unfavorite-note/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Failed to unfavorite note");
+  return await response.json();
+};
+
 // ============= CATEGORY SERVICES =============
 
 export const createCategory = async (categoryData: {

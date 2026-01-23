@@ -303,6 +303,84 @@ export function useUnpinNote() {
   });
 }
 
+// Favorite Note
+export function useFavoriteNote() {
+  const queryClient = useQueryClient();
+  const setError = useNoteStore((state) => state.setError);
+
+  return useMutation({
+    mutationFn: noteService.favoriteNote,
+    onMutate: async (noteId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: noteKeys.lists() });
+
+      // Snapshot previous value
+      const previousNotes = queryClient.getQueryData(noteKeys.lists());
+
+      // Optimistically update
+      queryClient.setQueryData(noteKeys.lists(), (old: Note[] | undefined) => {
+        if (!old) return old;
+        return old.map((note) =>
+          note._id === noteId ? { ...note, isFavorite: true } : note,
+        );
+      });
+
+      return { previousNotes };
+    },
+    onError: (error: Error, _, context) => {
+      // Rollback on error
+      if (context?.previousNotes) {
+        queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
+      }
+      setError(error.message);
+      alert(`Failed to favorite note: ${error.message}`);
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() });
+    },
+  });
+}
+
+// Unfavorite Note
+export function useUnfavoriteNote() {
+  const queryClient = useQueryClient();
+  const setError = useNoteStore((state) => state.setError);
+
+  return useMutation({
+    mutationFn: noteService.unfavoriteNote,
+    onMutate: async (noteId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: noteKeys.lists() });
+
+      // Snapshot previous value
+      const previousNotes = queryClient.getQueryData(noteKeys.lists());
+
+      // Optimistically update
+      queryClient.setQueryData(noteKeys.lists(), (old: Note[] | undefined) => {
+        if (!old) return old;
+        return old.map((note) =>
+          note._id === noteId ? { ...note, isFavorite: false } : note,
+        );
+      });
+
+      return { previousNotes };
+    },
+    onError: (error: Error, _, context) => {
+      // Rollback on error
+      if (context?.previousNotes) {
+        queryClient.setQueryData(noteKeys.lists(), context.previousNotes);
+      }
+      setError(error.message);
+      alert(`Failed to unfavorite note: ${error.message}`);
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() });
+    },
+  });
+}
+
 // Assign Category to Note
 // Assign Category to Note
 export function useAssignNoteCategory() {

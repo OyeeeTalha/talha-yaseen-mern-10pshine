@@ -16,6 +16,8 @@ import {
   useDeleteNote,
   usePinNote,
   useUnpinNote,
+  useFavoriteNote,
+  useUnfavoriteNote,
 } from "@/hooks/useNotes";
 import { useGetCategories } from "@/hooks/useCategories";
 import { useGetProfile } from "@/hooks/useUser";
@@ -48,6 +50,8 @@ function Dashboard() {
   const { mutate: deleteNote } = useDeleteNote();
   const { mutate: pinNote } = usePinNote();
   const { mutate: unpinNote } = useUnpinNote();
+  const { mutate: favoriteNote } = useFavoriteNote();
+  const { mutate: unfavoriteNote } = useUnfavoriteNote();
 
   // Get user's display name or first name, fallback to name or "User"
   const userName =
@@ -84,6 +88,18 @@ function Dashboard() {
     }
   };
 
+  const handleFavoriteToggle = (
+    noteId: string | undefined,
+    isFavorite: boolean,
+  ) => {
+    if (!noteId) return;
+    if (isFavorite) {
+      unfavoriteNote(noteId);
+    } else {
+      favoriteNote(noteId);
+    }
+  };
+
   const handleDelete = (noteId: string | undefined) => {
     if (!noteId) return;
     if (window.confirm("Are you sure you want to delete this note?")) {
@@ -110,7 +126,7 @@ function Dashboard() {
     if (selectedCategory === "All Notes") {
       return filtered.filter((n) => !n.isDeleted && !n.isTrash);
     } else if (selectedCategory === "Favorites") {
-      return filtered.filter((n) => n.isPinned && !n.isDeleted && !n.isTrash);
+      return filtered.filter((n) => n.isFavorite && !n.isDeleted && !n.isTrash);
     } else if (selectedCategory === "Trash") {
       return filtered.filter((n) => n.isTrash || n.isDeleted);
     } else if (selectedCategory === "Recent") {
@@ -201,11 +217,15 @@ function Dashboard() {
                       content={note.content || ""}
                       date={formatDate(note.updatedAt || note.createdAt)}
                       isPinned={note.isPinned || false}
+                      isFavorite={note.isFavorite || false}
                       categoryId={note.category}
                       categoryName={note.categoryName}
                       categoryIndex={note.categoryIndex}
                       onPinClick={() =>
                         handlePinToggle(note._id, note.isPinned || false)
+                      }
+                      onFavoriteClick={() =>
+                        handleFavoriteToggle(note._id, note.isFavorite || false)
                       }
                       onDelete={() => handleDelete(note._id)}
                       onClick={() => handleNoteClick(note._id)}
@@ -310,12 +330,19 @@ function Dashboard() {
                         content={note.content || ""}
                         date={formatDate(note.updatedAt || note.createdAt)}
                         isPinned={note.isPinned || false}
+                        isFavorite={note.isFavorite || false}
                         categoryId={note.category}
                         categoryName={note.categoryName}
                         categoryIndex={note.categoryIndex}
                         viewMode={viewMode}
                         onPinClick={() =>
                           handlePinToggle(note._id, note.isPinned || false)
+                        }
+                        onFavoriteClick={() =>
+                          handleFavoriteToggle(
+                            note._id,
+                            note.isFavorite || false,
+                          )
                         }
                         onDelete={() => handleDelete(note._id)}
                         onClick={() => handleNoteClick(note._id)}
