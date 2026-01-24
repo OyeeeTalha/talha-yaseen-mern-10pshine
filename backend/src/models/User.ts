@@ -86,6 +86,23 @@ const userSchema = new Schema(
     tokenExpiresAt: {
       type: Date,
     },
+    // Account Deactivation
+    isDeactivated: {
+      type: Boolean,
+      default: false,
+    },
+    deactivatedAt: {
+      type: Number, // Unix timestamp in seconds
+      default: null,
+    },
+    reactivationRequestSubmitted: {
+      type: Boolean,
+      default: false,
+    },
+    reactivationRequestSubmittedAt: {
+      type: Number, // Unix timestamp in seconds
+      default: null,
+    },
   },
   {
     timestamps: true,
