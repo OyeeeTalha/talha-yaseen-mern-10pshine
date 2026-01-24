@@ -131,10 +131,10 @@ function ProfilePage() {
 
   const handleDeactivate = async () => {
     const confirmed = await confirm({
-      title: "Deactivate Account?",
+      title: "Deactivate Account",
       message:
-        "Are you sure you want to deactivate your account? This action cannot be undone and all your data will be permanently deleted.",
-      confirmText: "Deactivate",
+        "Are you sure you want to deactivate your account? Your data will be kept for 30 days, after which it will be permanently deleted. You can restore your account by logging in during this period.",
+      confirmText: "Deactivate Account",
       cancelText: "Cancel",
       variant: "danger",
     });
