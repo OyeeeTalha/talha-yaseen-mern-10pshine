@@ -248,3 +248,101 @@ export const assignNoteCategory = async (
   );
   return await response.json();
 };
+
+// ============= SHARE SERVICES =============
+
+export interface ShareResponse {
+  status: string;
+  data: {
+    shareId: string;
+    accessLevel: "readonly" | "edit";
+    shareUrl: string;
+  };
+}
+
+export interface SharedNoteResponse {
+  status: string;
+  data: {
+    note: Note;
+    accessLevel: "readonly" | "edit" | "owner";
+    owner: {
+      name: string;
+      avatar: string;
+      avatarBgColor: string;
+    } | null;
+  };
+}
+
+export interface CollaboratorsResponse {
+  status: string;
+  data: {
+    shareId: string | null;
+    accessLevel: "readonly" | "edit" | null;
+    collaborators: Array<{
+      userId: string;
+      accessLevel: "readonly" | "edit";
+      addedAt: string;
+      user: {
+        name: string;
+        email: string;
+        avatar: string;
+        avatarBgColor: string;
+      } | null;
+    }>;
+  };
+}
+
+export const generateShareLink = async (
+  noteId: string,
+  accessLevel: "readonly" | "edit",
+): Promise<ShareResponse> => {
+  const response = await fetchWithLogging(
+    `${VITE_API_URL}/notes/share/${noteId}`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ accessLevel }),
+    },
+  );
+  return await response.json();
+};
+
+export const getSharedNote = async (
+  shareId: string,
+): Promise<SharedNoteResponse> => {
+  const response = await fetchWithLogging(
+    `${VITE_API_URL}/notes/shared/${shareId}`,
+    {
+      credentials: "include",
+    },
+  );
+  return await response.json();
+};
+
+export const disableSharing = async (
+  noteId: string,
+): Promise<{ status: string; message: string }> => {
+  const response = await fetchWithLogging(
+    `${VITE_API_URL}/notes/share/${noteId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
+  return await response.json();
+};
+
+export const getCollaborators = async (
+  noteId: string,
+): Promise<CollaboratorsResponse> => {
+  const response = await fetchWithLogging(
+    `${VITE_API_URL}/notes/share/${noteId}/collaborators`,
+    {
+      credentials: "include",
+    },
+  );
+  return await response.json();
+};

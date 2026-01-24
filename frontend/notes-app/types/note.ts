@@ -19,6 +19,27 @@ export interface Note {
   isTrash?: boolean;
   trashedAt?: number | null; // Unix timestamp in seconds
   isDeleted?: boolean;
+  // Sharing fields
+  shareId?: string; // Unique share identifier
+  shareAccessLevel?: "readonly" | "edit" | null;
+  shareUrl?: string;
+  sharedWith?: Array<{
+    userId: string;
+    name?: string;
+    email?: string;
+    image?: string;
+    avatarBgColor?: string;
+    accessLevel: "readonly" | "edit";
+  }>;
+  // Editors (users who have edited the note)
+  editors?: Array<{
+    userId: string;
+    name?: string;
+    email?: string;
+    image?: string;
+    avatarBgColor?: string;
+    lastEditedAt?: string | Date;
+  }>;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

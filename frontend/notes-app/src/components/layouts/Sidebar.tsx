@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { getDeterministicColor } from "@/lib/utils"; // Import utils
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
-import WatchLaterRoundedIcon from "@mui/icons-material/WatchLaterRounded";
+import FolderSharedRoundedIcon from "@mui/icons-material/FolderSharedRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
@@ -62,7 +62,7 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
   const navItems = [
     { name: "All Notes", icon: DescriptionRoundedIcon },
     { name: "Favorites", icon: StarRoundedIcon },
-    { name: "Recent", icon: WatchLaterRoundedIcon },
+    { name: "Shared", icon: FolderSharedRoundedIcon },
     { name: "Trash", icon: DeleteRoundedIcon },
   ];
 
