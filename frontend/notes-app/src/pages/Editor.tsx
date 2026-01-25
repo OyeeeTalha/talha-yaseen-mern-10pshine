@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { useGetNoteById, useUpdateNote } from "@/hooks/useNotes";
 import { useGetCategories, useCreateCategory } from "@/hooks/useCategories";
 import Loading from "@/components/ui/loading";
+import { useToast } from "@/hooks/useToast";
+import { ToastContainer } from "@/components/ui/toast";
 
 function Editor() {
   const { noteId } = useParams<{ noteId: string }>();
@@ -24,6 +26,9 @@ function Editor() {
   const [tagInput, setTagInput] = useState("");
   const [activeSidebarItem, setActiveSidebarItem] = useState("All Notes");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Toast hook
+  const { toasts, hideToast, success, error: showError } = useToast();
 
   // Hooks
   const { data: noteData, isLoading: isLoadingNote } = useGetNoteById(
@@ -98,11 +103,11 @@ function Editor() {
       {
         onSuccess: () => {
           setIsSaving(false);
-          alert("Note saved successfully!");
+          success("Note saved successfully");
         },
         onError: (error) => {
           setIsSaving(false);
-          alert(`Failed to save note: ${error.message}`);
+          showError(`Failed to save note: ${error.message}`);
         },
       },
     );
@@ -151,8 +156,11 @@ function Editor() {
               updateNote.mutate(
                 { id: noteId, data: notePayload },
                 {
+                  onSuccess: () => {
+                    success("Category assigned");
+                  },
                   onError: (error) => {
-                    alert(`Failed to assign category: ${error.message}`);
+                    showError(`Failed to assign category: ${error.message}`);
                   },
                 },
               );
@@ -173,6 +181,9 @@ function Editor() {
 
   return (
     <div className="flex h-screen bg-[#0d1117] text-white overflow-hidden font-poppins">
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={hideToast} />
+
       <Sidebar
         activeItem={activeSidebarItem}
         onItemClick={setActiveSidebarItem}
