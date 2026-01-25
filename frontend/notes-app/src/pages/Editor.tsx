@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn"; // Using shadcn interface
 import "@blocknote/shadcn/style.css";
 import Sidebar from "@/components/layouts/Sidebar";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
+import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import LocalOfferRoundedIcon from "@mui/icons-material/LocalOfferRounded";
 import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
@@ -13,19 +14,45 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import { Button } from "@/components/ui/button";
 import { useGetNoteById, useUpdateNote } from "@/hooks/useNotes";
 import { useGetCategories, useCreateCategory } from "@/hooks/useCategories";
+import { useGetProfile } from "@/hooks/useUser";
 import Loading from "@/components/ui/loading";
 import { useToast } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/ui/toast";
+import { logger } from "@/lib/logger";
+import { socketService } from "@/services/socketService";
+import { debounce } from "@/lib/utils";
+import { ShareNoteModal } from "@/components/ShareNoteModal";
+
+type AutosaveStatus = "idle" | "saving" | "saved" | "error" | "offline";
 
 function Editor() {
   const { noteId } = useParams<{ noteId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if this is a shared note (passed via navigation state)
+  const sharedNoteState = location.state as {
+    isSharedNote?: boolean;
+    accessLevel?: "readonly" | "edit" | "owner";
+    ownerName?: string;
+    shareId?: string;
+  } | null;
+
+  const isSharedNote = sharedNoteState?.isSharedNote || false;
+  const sharedAccessLevel = sharedNoteState?.accessLevel || "owner";
+  const sharedOwnerName = sharedNoteState?.ownerName || "Unknown";
+  const isReadOnly = isSharedNote && sharedAccessLevel === "readonly";
+  const canEdit = !isReadOnly;
 
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [activeSidebarItem, setActiveSidebarItem] = useState("All Notes");
   const [isSaving, setIsSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isContentLoaded, setIsContentLoaded] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Toast hook
   const { toasts, hideToast, success, error: showError } = useToast();
@@ -34,6 +61,7 @@ function Editor() {
   const { data: noteData, isLoading: isLoadingNote } = useGetNoteById(
     noteId || "",
   );
+  const { data: profileData } = useGetProfile();
 
   const { data: categoriesData } = useGetCategories();
   const updateNote = useUpdateNote();
@@ -47,6 +75,24 @@ function Editor() {
     () => noteData?.category || null,
   );
   const [tags, setTags] = useState<string[]>(() => noteData?.tags || []);
+
+  // Refs to hold current state for autosave (prevents re-creating debounced function)
+  const titleRef = useRef(title);
+  const categoryRef = useRef(selectedCategoryId);
+  const tagsRef = useRef(tags);
+
+  // Update refs when state changes
+  useEffect(() => {
+    titleRef.current = title;
+  }, [title]);
+
+  useEffect(() => {
+    categoryRef.current = selectedCategoryId;
+  }, [selectedCategoryId]);
+
+  useEffect(() => {
+    tagsRef.current = tags;
+  }, [tags]);
 
   // Sync state when switching to a different note or when data loads after refresh
   useEffect(() => {
@@ -62,30 +108,191 @@ function Editor() {
     ? categories.find((cat) => cat.id === selectedCategoryId)?.name || "Void"
     : "Void";
 
-  // Parse note content once - memoize based on content string to avoid re-parsing
+  // Parse note content once - memoize based on noteData to avoid re-parsing
   const parsedContent = useMemo(() => {
     if (noteData?.content) {
       try {
         return JSON.parse(noteData.content);
       } catch (error) {
-        console.error("Failed to parse note content:", error);
+        logger.error({ msg: "Failed to parse note content", error, noteId });
         return undefined;
       }
     }
     return undefined;
-  }, [noteData?.content]); // Only re-parse when content string changes
+  }, [noteData, noteId]);
 
   // Initialize BlockNote editor
   const editor = useCreateBlockNote();
 
   // Load content into editor when note changes
   useEffect(() => {
-    if (editor && parsedContent) {
-      editor.replaceBlocks(editor.document, parsedContent);
+    if (editor && noteData) {
+      if (parsedContent) {
+        editor.replaceBlocks(editor.document, parsedContent);
+      }
+      // Mark content as loaded after a short delay (even if content is empty for new notes)
+      setTimeout(() => setIsContentLoaded(true), 100);
     }
-  }, [editor, parsedContent]);
+  }, [editor, parsedContent, noteData]);
 
-  // Save Function
+  // Debounced autosave function
+  const triggerAutosave = useMemo(
+    () =>
+      debounce(() => {
+        // Don't autosave during initial load or for read-only shared notes
+        if (!noteId || !editor || !isContentLoaded || isReadOnly) return;
+
+        setAutosaveStatus("saving");
+
+        const payload = {
+          noteId,
+          title: titleRef.current,
+          content: JSON.stringify(editor.document),
+          category: categoryRef.current,
+          tags: tagsRef.current,
+        };
+
+        socketService.autosave(
+          payload,
+          (data) => {
+            setAutosaveStatus("saved");
+            setLastSavedAt(data.timestamp);
+            logger.info({ msg: "Autosave complete", noteId });
+
+            // DON'T invalidate cache - it causes content reload and adds new lines
+            // The autosave already updated the backend, no need to refetch
+          },
+          (error) => {
+            setAutosaveStatus("error");
+            logger.error({ msg: "Autosave failed", error });
+            showError(`Autosave failed: ${error}`);
+          },
+        );
+      }, 2000),
+    [
+      noteId,
+      editor,
+      // title, selectedCategoryId, tags removed from dependencies to avoid reset
+      isContentLoaded,
+      showError,
+      isReadOnly
+    ],
+  );
+
+  // Initialize WebSocket and autosave
+  useEffect(() => {
+    if (!noteId) return;
+
+    // Connect to WebSocket
+    socketService.connect();
+
+    // Join note room
+    socketService.joinNote(
+      noteId,
+      () => {
+        logger.info({ msg: "Joined note room", noteId });
+        setAutosaveStatus("idle");
+      },
+      (error) => {
+        logger.error({ msg: "Failed to join note room", error });
+        setAutosaveStatus("error");
+        showError("Failed to connect for autosave");
+      },
+    );
+
+    // Cleanup on unmount or note change
+    return () => {
+      // Only save if content was loaded and user can edit
+      // This prevents saving empty content during initial load
+      if (editor && isContentLoaded && !isReadOnly) {
+        const finalPayload = {
+          noteId,
+          title,
+          content: JSON.stringify(editor.document),
+          category: selectedCategoryId,
+          tags,
+        };
+
+        // Use sync save for immediate effect
+        socketService.saveSync(finalPayload);
+
+        // Also trigger socket leave
+        socketService.leaveNote(finalPayload);
+      }
+    };
+  }, [noteId, editor, title, selectedCategoryId, tags, showError, isContentLoaded, isReadOnly]);
+
+  // Handle browser close, refresh, or tab close
+  useEffect(() => {
+    if (!noteId || !editor) return;
+
+    const handleBeforeUnload = () => {
+      // Only save if content was loaded and user can edit
+      if (!isContentLoaded || isReadOnly) return;
+      
+      // Use synchronous save for page unload (Beacon API)
+      const finalPayload = {
+        noteId,
+        title,
+        content: JSON.stringify(editor.document),
+        category: selectedCategoryId,
+        tags,
+      };
+
+      socketService.saveSync(finalPayload);
+      socketService.leaveNote(finalPayload);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [noteId, editor, title, selectedCategoryId, tags, isContentLoaded, isReadOnly]);
+
+  // Trigger autosave when content or metadata changes
+  useEffect(() => {
+    if (!noteId || !editor) return;
+
+    const handleContentChange = () => {
+      setAutosaveStatus("idle");
+      triggerAutosave();
+    };
+
+    // Listen to editor changes
+    editor.onChange(handleContentChange);
+
+    return () => {
+      // Cleanup
+    };
+  }, [editor, noteId, triggerAutosave]);
+
+  // Trigger autosave when title, category, or tags change
+  useEffect(() => {
+    // Don't autosave on initial mount
+    if (!noteId || !isContentLoaded) return;
+    triggerAutosave();
+  }, [
+    title,
+    selectedCategoryId,
+    tags,
+    noteId,
+    isContentLoaded,
+    triggerAutosave,
+  ]);
+
+  // Monitor connection status
+  useEffect(() => {
+    const checkConnection = setInterval(() => {
+      if (!socketService.isConnected() && noteId) {
+        setAutosaveStatus("offline");
+      }
+    }, 5000);
+
+    return () => clearInterval(checkConnection);
+  }, [noteId]);
+
+  // Save Function (Manual Save)
   const handleSave = async () => {
     if (!noteId) return;
 
@@ -194,30 +401,161 @@ function Editor() {
         <header className="h-16 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0 bg-[#0d1117]">
           <div className="flex items-center gap-4">
             <Button
-              onClick={() => navigate("/dashboard")}
+              onClick={async () => {
+                // Save synchronously before navigating
+                if (editor && noteId) {
+                  const payload = {
+                    noteId,
+                    title,
+                    content: JSON.stringify(editor.document),
+                    category: selectedCategoryId,
+                    tags,
+                  };
+
+                  // Send sync save (Beacon API)
+                  socketService.saveSync(payload);
+
+                  // Also send socket leave message
+                  socketService.leaveNote(payload);
+
+                  // Small delay to ensure messages are sent
+                  await new Promise((resolve) => setTimeout(resolve, 100));
+                }
+
+                // Now navigate
+                navigate("/dashboard");
+              }}
               className="text-gray-400 hover:text-white transition-colors"
             >
               <ArrowBackRoundedIcon />
             </Button>
-            <span className="text-sm text-gray-500">
-              {noteData?.updatedAt
-                ? `Last edited ${new Date(noteData.updatedAt).toLocaleString()}`
-                : "New note"}
-            </span>
+            <div className="flex flex-col">
+              {isSharedNote ? (
+                <>
+                  <span className="text-sm text-gray-500">
+                    Shared by {sharedOwnerName}
+                  </span>
+                  <span
+                    className={`text-xs flex items-center gap-1 ${
+                      isReadOnly ? "text-orange-400" : "text-green-400"
+                    }`}
+                  >
+                    {isReadOnly ? "Read-only access" : "Can edit"}
+                  </span>
+                  {/* Autosave Status for shared notes with edit access */}
+                  {!isReadOnly && autosaveStatus !== "idle" && (
+                    <span
+                      className={`text-xs ${
+                        autosaveStatus === "saving"
+                          ? "text-yellow-400"
+                          : autosaveStatus === "saved"
+                            ? "text-green-400"
+                            : autosaveStatus === "offline"
+                              ? "text-orange-400"
+                              : "text-red-400"
+                      }`}
+                    >
+                      {autosaveStatus === "saving" && "Saving..."}
+                      {autosaveStatus === "saved" &&
+                        (lastSavedAt
+                          ? `Saved at ${new Date(lastSavedAt).toLocaleTimeString()}`
+                          : "Saved")}
+                      {autosaveStatus === "offline" &&
+                        "Offline - will save when reconnected"}
+                      {autosaveStatus === "error" && "Autosave error"}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="text-sm text-gray-500">
+                    {noteData?.updatedAt
+                      ? `Last edited ${new Date(noteData.updatedAt).toLocaleString()}`
+                      : "New note"}
+                  </span>
+                  {/* Autosave Status Indicator */}
+                  {autosaveStatus !== "idle" && (
+                    <span
+                      className={`text-xs ${
+                        autosaveStatus === "saving"
+                          ? "text-yellow-400"
+                          : autosaveStatus === "saved"
+                            ? "text-green-400"
+                            : autosaveStatus === "offline"
+                              ? "text-orange-400"
+                              : "text-red-400"
+                      }`}
+                    >
+                      {autosaveStatus === "saving" && "Saving..."}
+                      {autosaveStatus === "saved" &&
+                        (lastSavedAt
+                          ? `Saved at ${new Date(lastSavedAt).toLocaleTimeString()}`
+                          : "Saved")}
+                      {autosaveStatus === "offline" &&
+                        "Offline - will save when reconnected"}
+                      {autosaveStatus === "error" && "Autosave error"}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleSave}
-              disabled={isSaving || updateNote.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-full text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <SaveRoundedIcon sx={{ fontSize: 18 }} />
-              <span>
-                {isSaving || updateNote.isPending ? "Saving..." : "Save"}
-              </span>
-            </button>
+            {/* Only show Share button for owned notes (where user ID matches creator) */}
+            {noteData?.userId === profileData?.data?.user?._id && (
+              <button
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 text-gray-300 hover:bg-white/10 rounded-full text-sm font-medium transition-all"
+              >
+                <ShareRoundedIcon sx={{ fontSize: 18 }} />
+                <span>Share</span>
+              </button>
+            )}
+            {/* Only show Save button when user can edit */}
+            {canEdit && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving || updateNote.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-full text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <SaveRoundedIcon sx={{ fontSize: 18 }} />
+                <span>
+                  {isSaving || updateNote.isPending ? "Saving..." : "Save Now"}
+                </span>
+              </button>
+            )}
           </div>
         </header>
+
+        {/* Read-only Banner for shared notes */}
+        {isReadOnly && (
+          <div className="bg-orange-500/10 border-b border-orange-500/20 px-8 py-3 flex items-center gap-3">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-orange-400"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span className="text-orange-400 text-sm">
+              You have view-only access to this note. Contact the owner to request edit access.
+            </span>
+          </div>
+        )}
+
+        {/* Share Modal - only for owned notes */}
+        {noteId && !isSharedNote && (
+          <ShareNoteModal
+            noteId={noteId}
+            isOpen={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
+          />
+        )}
 
         {/* Editor Content Area */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -228,8 +566,10 @@ function Editor() {
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-transparent text-4xl font-bold text-white placeholder-gray-600 border-none outline-none ring-0 p-0"
+                onChange={(e) => !isReadOnly && setTitle(e.target.value)}
+                disabled={isReadOnly}
+                readOnly={isReadOnly}
+                className={`w-full bg-transparent text-4xl font-bold text-white placeholder-gray-600 border-none outline-none ring-0 p-0 ${isReadOnly ? "cursor-not-allowed opacity-80" : ""}`}
                 placeholder="Note Title"
               />
 
@@ -409,6 +749,7 @@ function Editor() {
             <div className="editor-wrapper min-h-125">
               <BlockNoteView
                 editor={editor}
+                editable={!isReadOnly}
                 theme={"dark"}
                 className="min-h-screen text-white"
               />
