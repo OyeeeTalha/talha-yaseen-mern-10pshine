@@ -9,6 +9,7 @@ import { AppError } from "./shared/errors/AppError.js";
 import { ExpressAuth } from "@auth/express";
 import { authConfig } from "./features/auth/config.js";
 import noteRoutes from "./features/notes/routes.js";
+import shareRoutes from "./features/notes/shareRoutes.js";
 import userRoutes from "./features/user/routes.js";
 
 const app: Application = express();
@@ -50,6 +51,7 @@ app.use("/auth", ExpressAuth(authConfig));
 
 //Express Routes
 app.use("/notes", noteRoutes);
+app.use("/notes", shareRoutes);
 app.use("/user", userRoutes);
 
 app.get("/", (req, res) => {
