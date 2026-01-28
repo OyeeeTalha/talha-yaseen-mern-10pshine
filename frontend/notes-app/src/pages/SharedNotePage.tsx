@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSharedNote } from "@/services/noteServices";
 import { UserAuth } from "@/hooks/userAuth";
 import LoadingSpinner from "@/components/ui/loading";
-import "./SharedNotePage.css";
+
 
 export default function SharedNotePage() {
   const { shareId } = useParams<{ shareId: string }>();
@@ -55,20 +55,28 @@ export default function SharedNotePage() {
 
   // Show loading while checking auth
   if (isAuthLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   // If not authenticated, will redirect (handled by useEffect)
   if (!user?.user) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   // Loading state for note
   if (isNoteLoading) {
     return (
-      <div className="shared-note-container">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
         <LoadingSpinner />
-        <p style={{ textAlign: "center", color: "#6b7280", marginTop: "16px" }}>
+        <p className="text-center text-slate-500 dark:text-slate-400 mt-6 animate-pulse font-medium">
           Loading shared note...
         </p>
       </div>
@@ -78,11 +86,32 @@ export default function SharedNotePage() {
   // Error state
   if (error || !sharedNoteData?.data) {
     return (
-      <div className="shared-note-container">
-        <div className="shared-note-error">
-          <h2>Note Not Found</h2>
-          <p>This shared note doesn't exist or the link has expired.</p>
-          <button onClick={() => navigate("/dashboard")}>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6">
+        <div className="flex flex-col items-center justify-center text-center max-w-md w-full animate-in fade-in zoom-in-95 duration-300">
+          <div className="w-20 h-20 bg-red-50 dark:bg-red-900/10 rounded-2xl flex items-center justify-center mb-6 text-red-500 dark:text-red-400 ring-1 ring-red-100 dark:ring-red-900/30">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <h2 className="mb-3 text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">Note Not Found</h2>
+          <p className="mb-8 text-slate-500 dark:text-slate-400 text-lg leading-relaxed">
+            This shared note doesn&apos;t exist or the link has expired.
+          </p>
+          <button 
+            onClick={() => navigate("/dashboard")}
+            className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 active:scale-95"
+          >
             Go to Dashboard
           </button>
         </div>
@@ -92,9 +121,9 @@ export default function SharedNotePage() {
 
   // Show loading while redirecting
   return (
-    <div className="shared-note-container">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
       <LoadingSpinner />
-      <p style={{ textAlign: "center", color: "#6b7280", marginTop: "16px" }}>
+      <p className="text-center text-slate-500 dark:text-slate-400 mt-6 animate-pulse font-medium">
         Opening note...
       </p>
     </div>
