@@ -19,8 +19,17 @@ import {
   deleteCategory,
   assignNoteCategory,
 } from "./controller.js";
+import {
+  generateShareLink,
+  getSharedNote,
+  disableSharing,
+  getCollaborators,
+} from "../shared-notes/controller.js";
 
 const router = Router();
+
+// Public route for shared notes
+router.get("/shared/:shareId", getSharedNote);
 
 router.use(protect);
 
@@ -53,5 +62,10 @@ router.get("/get-categories", getCategories);
 router.delete("/delete-category/:id", deleteCategory);
 
 router.patch("/assign-note-category/:noteId", assignNoteCategory);
+
+// Share Routes
+router.post("/share/:noteId", generateShareLink);
+router.delete("/share/:noteId", disableSharing);
+router.get("/share/:noteId/collaborators", getCollaborators);
 
 export default router;

@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 import { socketAuthMiddleware } from "../../shared/middlewares/socketAuth.js";
 import { NoteModel } from "../../models/Notes.js";
+import { SharedNoteModel } from "../../models/SharedNote.js";
 import { updateNoteSchema } from "./schema.js";
 import logger from "../../shared/utils/logger.js";
 import { Types } from "mongoose";
@@ -44,35 +45,45 @@ async function checkNoteAccess(
   noteId: string,
   userId: string
 ): Promise<{ note: any; accessLevel: "owner" | "edit" | "readonly" | null }> {
-  const note = await NoteModel.findOne({
-    _id: noteId,
-    isDeleted: { $ne: true },
-  });
+  try {
+    const note = await NoteModel.findOne({
+      _id: noteId,
+      isDeleted: { $ne: true },
+    });
 
-  if (!note) {
+    if (!note) {
+      return { note: null, accessLevel: null };
+    }
+
+    // Check if owner
+    if (note.userId.toString() === userId) {
+      return { note, accessLevel: "owner" };
+    }
+
+    // Check shared notes
+    const sharedNote = await SharedNoteModel.findOne({ noteId });
+    
+    if (sharedNote) {
+      // Check for explicit collaborator
+      const collaborator = sharedNote.collaborators.find(
+        (c) => c.userId.toString() === userId
+      );
+
+      if (collaborator) {
+        return { note, accessLevel: collaborator.accessLevel };
+      }
+
+      // Check general access level
+      if (sharedNote.generalAccessLevel) {
+        return { note, accessLevel: sharedNote.generalAccessLevel as "edit" | "readonly" };
+      }
+    }
+
+    return { note: null, accessLevel: null };
+  } catch (error) {
+    logger.error({ msg: "Error checking note access", error, noteId, userId });
     return { note: null, accessLevel: null };
   }
-
-  // Check if owner
-  if (note.userId.toString() === userId) {
-    return { note, accessLevel: "owner" };
-  }
-
-  // Check if in sharedWith list
-  const sharedEntry = note.sharedWith?.find(
-    (s) => s.userId?.toString() === userId
-  );
-
-  if (sharedEntry) {
-    return { note, accessLevel: sharedEntry.accessLevel as "edit" | "readonly" };
-  }
-
-  // Check if note is shared via link and user has accessed it
-  if (note.shareId && note.shareAccessLevel) {
-    return { note, accessLevel: note.shareAccessLevel as "edit" | "readonly" };
-  }
-
-  return { note: null, accessLevel: null };
 }
 
 // Determine change types for edit history
@@ -212,26 +223,42 @@ export const setupSocketHandlers = (io: Server) => {
 
         // Only run update if there are fields to update
         if (Object.keys(updateFields).length > 0) {
-          // Get change types for edit history
-          const changeTypes = getChangeTypes(updates);
+          const now = new Date();
+          const userObjectId = new Types.ObjectId(userId);
 
-          // Update note and add to edit history (only track for non-owners)
-          const updateOperation: any = { $set: updateFields };
-          
-          // Add edit history entry (limit to last 50 entries)
-          // Track for everyone including owner
-          updateOperation.$push = {
-            editHistory: {
-              $each: changeTypes.map((changeType) => ({
-                userId: new Types.ObjectId(userId),
-                editedAt: new Date(),
-                changeType,
-              })),
-              $slice: -50, // Keep only last 50 entries
-            },
-          };
+          // 1. Update content content (always)
+          // This ensures the note is saved even if history logic hits a rare race condition
+          await NoteModel.updateOne({ _id: noteId }, { $set: updateFields });
 
-          await NoteModel.updateOne({ _id: noteId }, updateOperation);
+          // 2. Try to update existing history entry
+          const historyUpdateResult = await NoteModel.updateOne(
+            { _id: noteId, "editHistory.userId": userObjectId },
+            {
+              $set: {
+                "editHistory.$.lastEditedAt": now,
+              },
+            }
+          );
+
+          // 3. If user wasn't in history, push new entry (safely)
+          // The $ne check prevents race conditions where two requests try to push simultaneously
+          if (historyUpdateResult.matchedCount === 0) {
+            await NoteModel.updateOne(
+              {
+                _id: noteId,
+                "editHistory.userId": { $ne: userObjectId },
+              },
+              {
+                $push: {
+                  editHistory: {
+                    userId: userObjectId,
+                    firstEditedAt: now,
+                    lastEditedAt: now,
+                  },
+                },
+              }
+            );
+          }
 
           logger.info({
             msg: "Autosave successful",
@@ -241,7 +268,7 @@ export const setupSocketHandlers = (io: Server) => {
             fields: Object.keys(updateFields),
           });
 
-          const timestamp = new Date().toISOString();
+          const timestamp = now.toISOString();
 
           // Emit success to the sender
           socket.emit("note:autosave-success", {
