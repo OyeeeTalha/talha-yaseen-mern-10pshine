@@ -3,6 +3,7 @@ import { catchAsync } from "../../shared/utils/catchAsync.js";
 import { AppError } from "../../shared/errors/AppError.js";
 import { NoteModel } from "../../models/Notes.js";
 import { UserModel } from "../../models/User.js";
+import { SharedNoteModel } from "../../models/SharedNote.js";
 import { Types } from "mongoose";
 import {
   createNoteSchema,
@@ -356,18 +357,42 @@ export const getNoteById = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("You must be logged in to view this note", 401);
   }
 
-  // Allow access if user owns the note OR is in sharedWith array
+  // First change: Find note by ID only (dont filter by owner yet)
   const note = await NoteModel.findOne({
     _id: id,
     isDeleted: false,
-    $or: [
-      { userId: userId },
-      { "sharedWith.userId": userId },
-    ],
   });
 
   if (!note) {
     throw new AppError("Note not found", 404);
+  }
+
+  let hasAccess = false;
+
+  // Check if owner
+  if (note.userId.toString() === userId) {
+    hasAccess = true;
+  } else {
+    // Check SharedNote permissions
+    const sharedNote = await SharedNoteModel.findOne({ noteId: note._id });
+    if (sharedNote) {
+      // Check specific collaborator access
+      const isCollaborator = sharedNote.collaborators.some(
+        (c) => c.userId.toString() === userId
+      );
+      if (isCollaborator) {
+        hasAccess = true;
+      }
+      // Check general access (if "edit" or "readonly")
+      // Note: for "readonly", they can view.
+      else if (sharedNote.generalAccessLevel) {
+        hasAccess = true;
+      }
+    }
+  }
+
+  if (!hasAccess) {
+    throw new AppError("You do not have permission to view this note", 403);
   }
 
   // Populate category name for single note (use note owner's categories)
