@@ -48,50 +48,23 @@ const notesSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    // Sharing fields
-    shareId: {
-      type: String,
-      unique: true,
-      sparse: true, // Only index non-null values
-      index: true,
-    },
-    shareAccessLevel: {
-      type: String,
-      enum: ["readonly", "edit", null],
-      default: null,
-    },
-    sharedWith: [
-      {
-        userId: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-        },
-        accessLevel: {
-          type: String,
-          enum: ["readonly", "edit"],
-        },
-        addedAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
     editHistory: [
       {
         userId: {
           type: Schema.Types.ObjectId,
           ref: "User",
         },
-        editedAt: {
+        firstEditedAt: {
           type: Date,
           default: Date.now,
         },
-        changeType: {
-          type: String,
-          enum: ["content", "title", "tags", "category"],
+        lastEditedAt: {
+          type: Date,
+          default: Date.now,
         },
       },
     ],
+
   },
   {
     timestamps: true,
