@@ -12,7 +12,14 @@ export const UserAuth = () => {
     isError,
   } = useQuery({
     queryKey: ["user-session"],
-    queryFn: getSession,
+    queryFn: async () => {
+      const session = await getSession();
+      // Auth.js returns an empty object {} when not authenticated
+      if (!session || (typeof session === "object" && Object.keys(session).length === 0)) {
+        return null;
+      }
+      return session;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
   });
@@ -21,9 +28,9 @@ export const UserAuth = () => {
 
   // Set user context in logger when user data is available
   useEffect(() => {
-    if (user?.id) {
-      setUserContext(user.id, user.email);
-      logger.info({ msg: "User authenticated", userId: user.id });
+    if (user?.user?.id) {
+      setUserContext(user.user.id, user.user.email);
+      logger.info({ msg: "User authenticated", userId: user.user.id });
     }
   }, [user]);
 
