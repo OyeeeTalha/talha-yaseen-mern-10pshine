@@ -1,6 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
+@source "../node_modules/@blocknote/shadcn";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -138,6 +139,11 @@
     outline-color: color-mix(in oklch, var(--ring), transparent 50%);
   }
 
+  /* BlockNote ShadCN required border styles */
+  .bn-shadcn * {
+    @apply border-border outline-ring/50;
+  }
+
   body {
     background-color: var(--color-background-light);
 
@@ -203,3 +209,205 @@
 .animate-scale-in {
   animation: scale-in 0.3s ease-out;
 }
+
+/* =========================================
+   BlockNote Editor - Premium UI Design
+   ========================================= */
+
+/* 1. Core Theme Variables */
+.bn-container[data-color-scheme="dark"] {
+  /* Text & Background */
+  --bn-colors-editor-text: #f1f5f9;
+  --bn-colors-editor-background: transparent;
+  
+  /* Floating Menus (Suggestions, Toolbar) */
+  --bn-colors-menu-text: #f8fafc;
+  --bn-colors-menu-background: rgba(26, 31, 46, 0.95); /* Deep dark blue-grey */
+  
+  /* Tooltips */
+  --bn-colors-tooltip-text: #f1f5f9;
+  --bn-colors-tooltip-background: #0f172a;
+  
+  /* Interactions */
+  --bn-colors-hovered-text: #ffffff;
+  --bn-colors-hovered-background: rgba(255, 255, 255, 0.08);
+  
+  /* Selection & Accents */
+  --bn-colors-selected-text: #ffffff;
+  --bn-colors-selected-background: #3b82f6; /* Premium Blue */
+  
+  /* States */
+  --bn-colors-disabled-text: #475569;
+  --bn-colors-disabled-background: transparent;
+  
+  /* UI Structure */
+  --bn-colors-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --bn-colors-border: rgba(255, 255, 255, 0.1);
+  --bn-colors-side-menu: #94a3b8;
+  
+  /* Typography */
+  --bn-font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --bn-border-radius: 12px;
+}
+
+/* 2. Editor Surface */
+.bn-editor {
+  background-color: transparent !important;
+  padding-left: 56px !important; /* Visual balance */
+  padding-right: 56px !important;
+}
+
+/* 3. Floating UI Elements (Toolbars, Menus) - Glassmorphism & Depth */
+.bn-container [class*="Toolbar"],
+.bn-container [class*="SuggestionMenu"],
+.bn-container [class*="SideMenu"] [class*="Menu"],
+[data-bn-suggestion-menu] {
+  background: rgba(26, 31, 46, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 10px 15px -3px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.2) !important;
+  padding: 6px !important;
+  animation: bn-fade-in-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 4. Menu Items - Smooth Interactions */
+.bn-container [class*="SuggestionMenu"] [class*="item"],
+.bn-container [class*="Toolbar"] button {
+  border-radius: 8px !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  padding: 8px 12px !important;
+  color: #cbd5e1 !important;
+}
+
+/* Hover State */
+.bn-container [class*="SuggestionMenu"] [class*="item"]:hover,
+.bn-container [class*="Toolbar"] button:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* Active/Selected State */
+.bn-container [class*="SuggestionMenu"] [class*="item"][data-selected="true"],
+.bn-container [class*="Toolbar"] button[data-active="true"],
+.bn-container [class*="Toolbar"] button[data-state="on"] {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2)) !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  color: #60a5fa !important;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* 5. Drag Handle & Side Menu */
+.bn-container [class*="DragHandle"] {
+  background-color: transparent !important;
+  transition: opacity 0.2s ease;
+  opacity: 0.6;
+  color: #94a3b8 !important;
+}
+
+.bn-container [class*="DragHandle"]:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff !important;
+}
+
+.bn-container [class*="SideMenu"] button {
+  color: #94a3b8 !important;
+  transition: all 0.2s ease !important;
+  border-radius: 6px !important;
+}
+
+.bn-container [class*="SideMenu"] button:hover {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+  transform: scale(1.05); /* Subtle pop */
+}
+
+/* 6. Typography & Content Refinement */
+.bn-block-content {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11"; /* Modern font features */
+  line-height: 1.6 !important;
+}
+
+.bn-container h1, .bn-container h2, .bn-container h3 {
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* 7. Inputs & Forms (Modals) */
+.bn-container input,
+.bn-container textarea {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f1f5f9 !important;
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+  transition: all 0.2s ease !important;
+  backdrop-filter: blur(4px);
+}
+
+.bn-container input:focus,
+.bn-container textarea:focus {
+  border-color: #3b82f6 !important;
+  background: rgba(15, 23, 42, 0.8) !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+  outline: none !important;
+}
+
+/* 8. Buttons (Primary & Secondary) */
+.bn-container button[class*="Button"] {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+/* Primary Action Button */
+.bn-container button[data-variant="filled"],
+.bn-container button[class*="primary"] {
+  background: #3b82f6 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.bn-container button[data-variant="filled"]:hover,
+.bn-container button[class*="primary"]:hover {
+  background: #2563eb !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 9. Panels (File Upload, Embeds) */
+.bn-container [class*="Panel"] {
+  background: rgba(30, 41, 59, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important; /* Softer corners */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* 10. Dividers & Accents */
+.bn-container hr, 
+.bn-container [class*="Divider"] {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 11. Custom Animation Keyframes */
+@keyframes bn-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
