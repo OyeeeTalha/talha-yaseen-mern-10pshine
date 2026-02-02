@@ -16,6 +16,7 @@ import { useGetCategories, useCreateCategory } from "@/hooks/useCategories";
 import Loading from "@/components/ui/loading";
 import { useToast } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/ui/toast";
+import { logger } from "@/lib/logger";
 
 function Editor() {
   const { noteId } = useParams<{ noteId: string }>();
@@ -62,18 +63,18 @@ function Editor() {
     ? categories.find((cat) => cat.id === selectedCategoryId)?.name || "Void"
     : "Void";
 
-  // Parse note content once - memoize based on content string to avoid re-parsing
+  // Parse note content once - memoize based on noteData to avoid re-parsing
   const parsedContent = useMemo(() => {
     if (noteData?.content) {
       try {
         return JSON.parse(noteData.content);
       } catch (error) {
-        console.error("Failed to parse note content:", error);
+        logger.error({ msg: "Failed to parse note content", error, noteId });
         return undefined;
       }
     }
     return undefined;
-  }, [noteData?.content]); // Only re-parse when content string changes
+  }, [noteData, noteId]);
 
   // Initialize BlockNote editor
   const editor = useCreateBlockNote();
