@@ -48,6 +48,23 @@ const notesSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    editHistory: [
+      {
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+        firstEditedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        lastEditedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
   },
   {
     timestamps: true,

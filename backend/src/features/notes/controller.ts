@@ -3,6 +3,7 @@ import { catchAsync } from "../../shared/utils/catchAsync.js";
 import { AppError } from "../../shared/errors/AppError.js";
 import { NoteModel } from "../../models/Notes.js";
 import { UserModel } from "../../models/User.js";
+import { SharedNoteModel } from "../../models/SharedNote.js";
 import { Types } from "mongoose";
 import {
   createNoteSchema,
@@ -12,6 +13,7 @@ import {
 import { TRASH_PERIOD_SECONDS } from "../../config/trash.config.js";
 
 // Helper function to convert category IDs to names and indices in notes
+// Also populates sharedWith user details and editors from editHistory
 const populateCategoryNames = async (notes: any[], userId: string) => {
   const user = await UserModel.findById(userId);
   if (!user) return notes;
@@ -24,16 +26,91 @@ const populateCategoryNames = async (notes: any[], userId: string) => {
     ]),
   );
 
+  // Collect all unique user IDs from sharedWith and editHistory
+  const allUserIds = new Set<string>();
+  notes.forEach((note) => {
+    const noteObj = note.toObject ? note.toObject() : note;
+    // Collect from sharedWith
+    if (noteObj.sharedWith && Array.isArray(noteObj.sharedWith)) {
+      noteObj.sharedWith.forEach((collab: any) => {
+        if (collab.userId) {
+          allUserIds.add(collab.userId.toString());
+        }
+      });
+    }
+    // Collect from editHistory
+    if (noteObj.editHistory && Array.isArray(noteObj.editHistory)) {
+      noteObj.editHistory.forEach((edit: any) => {
+        if (edit.userId) {
+          allUserIds.add(edit.userId.toString());
+        }
+      });
+    }
+  });
+
+  // Fetch all user details in one query
+  const users = await UserModel.find(
+    { _id: { $in: Array.from(allUserIds) } },
+    { name: 1, email: 1, avatar: 1, avatarBgColor: 1 }
+  );
+
+  // Create map of user ID to user details
+  const userMap = new Map(
+    users.map((u) => [
+      u._id.toString(),
+      { name: u.name, email: u.email, avatar: u.avatar, avatarBgColor: u.avatarBgColor },
+    ])
+  );
+
   return notes.map((note) => {
-    const noteObj = note.toObject();
+    const noteObj = note.toObject ? note.toObject() : note;
     const categoryId = noteObj.category?.toString();
     const categoryInfo = categoryId ? categoryMap.get(categoryId) : null;
+
+    // Populate sharedWith with user details
+    const populatedSharedWith = (noteObj.sharedWith || []).map((collab: any) => {
+      const userDetails = userMap.get(collab.userId?.toString());
+      return {
+        userId: collab.userId?.toString(),
+        accessLevel: collab.accessLevel,
+        addedAt: collab.addedAt,
+        name: userDetails?.name,
+        email: userDetails?.email,
+        image: userDetails?.avatar, // Map avatar to image for frontend
+        avatarBgColor: userDetails?.avatarBgColor, // Map background color
+      };
+    });
+
+    // Extract unique editors from editHistory with user details
+    const editorIds = new Set<string>();
+    const editors: Array<{userId: string; name?: string; email?: string; image?: string; avatarBgColor?: string; lastEditedAt?: Date}> = [];
+    
+    // Process editHistory in reverse to get most recent edits first
+    const editHistory = noteObj.editHistory || [];
+    for (let i = editHistory.length - 1; i >= 0; i--) {
+      const edit = editHistory[i];
+      const editorId = edit.userId?.toString();
+      if (editorId && !editorIds.has(editorId)) {
+        editorIds.add(editorId);
+        const userDetails = userMap.get(editorId);
+        editors.push({
+          userId: editorId,
+          name: userDetails?.name,
+          email: userDetails?.email,
+          image: userDetails?.avatar,
+          avatarBgColor: userDetails?.avatarBgColor,
+          lastEditedAt: edit.editedAt,
+        });
+      }
+    }
 
     return {
       ...noteObj,
       category: categoryId || null, // Keep as ObjectId string or null
       categoryName: categoryInfo?.name || "Void",
       categoryIndex: categoryInfo?.index ?? null, // For color generation
+      sharedWith: populatedSharedWith,
+      editors, // Array of unique editors with most recent editor first
     };
   });
 };
@@ -243,8 +320,13 @@ export const getAllNotes = catchAsync(async (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 10;
   const skip = (page - 1) * limit;
 
-  // Find notes for this user that are NOT soft-deleted
-  const notes = await NoteModel.find({ userId: userId, isDeleted: false })
+  // Find notes for this user OR shared with this user that are NOT soft-deleted
+  const query = {
+    $or: [{ userId: userId }, { "sharedWith.userId": userId }],
+    isDeleted: false,
+  };
+
+  const notes = await NoteModel.find(query)
     .sort({ isPinned: -1, updatedAt: -1 }) // Pinned first, then newest
     .skip(skip)
     .limit(limit);
@@ -253,10 +335,7 @@ export const getAllNotes = catchAsync(async (req: Request, res: Response) => {
   const notesWithCategories = await populateCategoryNames(notes, userId);
 
   // Count total documents for pagination metadata
-  const totalNotes = await NoteModel.countDocuments({
-    userId: userId,
-    isDeleted: false,
-  });
+  const totalNotes = await NoteModel.countDocuments(query);
 
   res.status(200).json({
     status: "success",
@@ -278,9 +357,9 @@ export const getNoteById = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("You must be logged in to view this note", 401);
   }
 
+  // First change: Find note by ID only (dont filter by owner yet)
   const note = await NoteModel.findOne({
     _id: id,
-    userId: userId,
     isDeleted: false,
   });
 
@@ -288,8 +367,36 @@ export const getNoteById = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("Note not found", 404);
   }
 
-  // Populate category name for single note
-  const notesWithCategories = await populateCategoryNames([note], userId);
+  let hasAccess = false;
+
+  // Check if owner
+  if (note.userId.toString() === userId) {
+    hasAccess = true;
+  } else {
+    // Check SharedNote permissions
+    const sharedNote = await SharedNoteModel.findOne({ noteId: note._id });
+    if (sharedNote) {
+      // Check specific collaborator access
+      const isCollaborator = sharedNote.collaborators.some(
+        (c) => c.userId.toString() === userId
+      );
+      if (isCollaborator) {
+        hasAccess = true;
+      }
+      // Check general access (if "edit" or "readonly")
+      // Note: for "readonly", they can view.
+      else if (sharedNote.generalAccessLevel) {
+        hasAccess = true;
+      }
+    }
+  }
+
+  if (!hasAccess) {
+    throw new AppError("You do not have permission to view this note", 403);
+  }
+
+  // Populate category name for single note (use note owner's categories)
+  const notesWithCategories = await populateCategoryNames([note], note.userId.toString());
 
   res.status(200).json({
     status: "success",

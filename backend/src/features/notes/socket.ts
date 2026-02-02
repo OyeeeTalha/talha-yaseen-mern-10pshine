@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 import { socketAuthMiddleware } from "../../shared/middlewares/socketAuth.js";
 import { NoteModel } from "../../models/Notes.js";
+import { SharedNoteModel } from "../../models/SharedNote.js";
 import { updateNoteSchema } from "./schema.js";
 import logger from "../../shared/utils/logger.js";
 import { Types } from "mongoose";
@@ -39,6 +40,62 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
+// Check if user has access to a note (owner or collaborator)
+async function checkNoteAccess(
+  noteId: string,
+  userId: string
+): Promise<{ note: any; accessLevel: "owner" | "edit" | "readonly" | null }> {
+  try {
+    const note = await NoteModel.findOne({
+      _id: noteId,
+      isDeleted: { $ne: true },
+    });
+
+    if (!note) {
+      return { note: null, accessLevel: null };
+    }
+
+    // Check if owner
+    if (note.userId.toString() === userId) {
+      return { note, accessLevel: "owner" };
+    }
+
+    // Check shared notes
+    const sharedNote = await SharedNoteModel.findOne({ noteId });
+    
+    if (sharedNote) {
+      // Check for explicit collaborator
+      const collaborator = sharedNote.collaborators.find(
+        (c) => c.userId.toString() === userId
+      );
+
+      if (collaborator) {
+        return { note, accessLevel: collaborator.accessLevel };
+      }
+
+      // Check general access level
+      if (sharedNote.generalAccessLevel) {
+        return { note, accessLevel: sharedNote.generalAccessLevel as "edit" | "readonly" };
+      }
+    }
+
+    return { note: null, accessLevel: null };
+  } catch (error) {
+    logger.error({ msg: "Error checking note access", error, noteId, userId });
+    return { note: null, accessLevel: null };
+  }
+}
+
+// Determine change types for edit history
+function getChangeTypes(updates: Partial<AutosavePayload>): string[] {
+  const changeTypes: string[] = [];
+  if (updates.title !== undefined) changeTypes.push("title");
+  if (updates.content !== undefined) changeTypes.push("content");
+  if (updates.tags !== undefined) changeTypes.push("tags");
+  if (updates.category !== undefined) changeTypes.push("category");
+  return changeTypes;
+}
+
 export const setupSocketHandlers = (io: Server) => {
   // Apply authentication middleware
   io.use(socketAuthMiddleware);
@@ -52,34 +109,54 @@ export const setupSocketHandlers = (io: Server) => {
       userId,
     });
 
-    // Join a note room
+    // Join a note room - supports both owner and collaborators
     socket.on("note:join", async (noteId: string) => {
       try {
-        // Verify user owns this note
-        const note = await NoteModel.findOne({ _id: noteId, userId });
+        const { note, accessLevel } = await checkNoteAccess(noteId, userId);
 
-        if (!note) {
+        if (!note || !accessLevel) {
           socket.emit("note:error", {
             message: "Note not found or access denied",
           });
           return;
         }
 
+        // Store access level in socket data for later use
+        socket.data.noteAccess = socket.data.noteAccess || {};
+        socket.data.noteAccess[noteId] = accessLevel;
+
         socket.join(`note:${noteId}`);
+        
+        // Get count of users in the room
+        const room = io.sockets.adapter.rooms.get(`note:${noteId}`);
+        const collaboratorCount = room ? room.size : 1;
+
         logger.info({
           msg: "User joined note room",
           noteId,
           userId,
+          accessLevel,
+          collaboratorCount,
         });
 
-        socket.emit("note:joined", { noteId });
+        socket.emit("note:joined", { 
+          noteId, 
+          accessLevel,
+          collaboratorCount 
+        });
+
+        // Notify other users in the room that someone joined
+        socket.to(`note:${noteId}`).emit("note:user-joined", {
+          userId,
+          collaboratorCount,
+        });
       } catch (error) {
         logger.error({ msg: "Error joining note room", error, noteId });
         socket.emit("note:error", { message: "Failed to join note" });
       }
     });
 
-    // Autosave - DATABASE EFFICIENT: Only update changed fields
+    // Autosave - with collaboration support
     socket.on("note:autosave", async (payload: AutosavePayload) => {
       try {
         const { noteId, ...updates } = payload;
@@ -121,39 +198,90 @@ export const setupSocketHandlers = (io: Server) => {
           return;
         }
 
-        // Find note and verify ownership
-        const note = await NoteModel.findOne({ _id: noteId, userId });
+        // Check access - allow owners and editors only
+        const { note, accessLevel } = await checkNoteAccess(noteId, userId);
 
         if (!note) {
           socket.emit("note:autosave-error", { message: "Note not found" });
           return;
         }
 
+        if (accessLevel === "readonly") {
+          socket.emit("note:autosave-error", { 
+            message: "You have read-only access to this note" 
+          });
+          return;
+        }
+
         // DATABASE EFFICIENT: Only update fields that were sent
-        // $set only updates provided fields, doesn't touch others
         const updateFields: any = {};
 
         if (updates.title !== undefined) updateFields.title = updates.title;
-        if (updates.content !== undefined)
-          updateFields.content = updates.content;
-        if (updates.category !== undefined)
-          updateFields.category = updates.category;
+        if (updates.content !== undefined) updateFields.content = updates.content;
+        if (updates.category !== undefined) updateFields.category = updates.category;
         if (updates.tags !== undefined) updateFields.tags = updates.tags;
 
         // Only run update if there are fields to update
         if (Object.keys(updateFields).length > 0) {
+          const now = new Date();
+          const userObjectId = new Types.ObjectId(userId);
+
+          // 1. Update content content (always)
+          // This ensures the note is saved even if history logic hits a rare race condition
           await NoteModel.updateOne({ _id: noteId }, { $set: updateFields });
+
+          // 2. Try to update existing history entry
+          const historyUpdateResult = await NoteModel.updateOne(
+            { _id: noteId, "editHistory.userId": userObjectId },
+            {
+              $set: {
+                "editHistory.$.lastEditedAt": now,
+              },
+            }
+          );
+
+          // 3. If user wasn't in history, push new entry (safely)
+          // The $ne check prevents race conditions where two requests try to push simultaneously
+          if (historyUpdateResult.matchedCount === 0) {
+            await NoteModel.updateOne(
+              {
+                _id: noteId,
+                "editHistory.userId": { $ne: userObjectId },
+              },
+              {
+                $push: {
+                  editHistory: {
+                    userId: userObjectId,
+                    firstEditedAt: now,
+                    lastEditedAt: now,
+                  },
+                },
+              }
+            );
+          }
 
           logger.info({
             msg: "Autosave successful",
             noteId,
             userId,
+            accessLevel,
             fields: Object.keys(updateFields),
           });
 
+          const timestamp = now.toISOString();
+
+          // Emit success to the sender
           socket.emit("note:autosave-success", {
             noteId,
-            timestamp: new Date().toISOString(),
+            timestamp,
+          });
+
+          // Broadcast changes to other users in the room
+          socket.to(`note:${noteId}`).emit("note:content-updated", {
+            noteId,
+            updates: updateFields,
+            updatedBy: userId,
+            timestamp,
           });
         } else {
           // No changes to save
@@ -187,16 +315,16 @@ export const setupSocketHandlers = (io: Server) => {
     // Manual disconnect with final save
     socket.on("note:leave", async (payload: AutosavePayload) => {
       try {
-        // Same logic as autosave for final save
         const { noteId, ...updates } = payload;
 
         if (Object.keys(updates).length > 0) {
           const validation = updateNoteSchema.safeParse(updates);
 
           if (validation.success) {
-            const note = await NoteModel.findOne({ _id: noteId, userId });
+            const { note, accessLevel } = await checkNoteAccess(noteId, userId);
 
-            if (note) {
+            // Only save if user has edit access
+            if (note && accessLevel && accessLevel !== "readonly") {
               const updateFields: any = {};
               if (updates.title !== undefined)
                 updateFields.title = updates.title;
@@ -209,14 +337,29 @@ export const setupSocketHandlers = (io: Server) => {
               if (Object.keys(updateFields).length > 0) {
                 await NoteModel.updateOne(
                   { _id: noteId },
-                  { $set: updateFields },
+                  { $set: updateFields }
                 );
               }
             }
           }
         }
 
+        // Notify others that user left
+        const room = io.sockets.adapter.rooms.get(`note:${noteId}`);
+        const collaboratorCount = room ? room.size - 1 : 0;
+        
+        socket.to(`note:${noteId}`).emit("note:user-left", {
+          userId,
+          collaboratorCount,
+        });
+
         socket.leave(`note:${noteId}`);
+        
+        // Clean up socket data
+        if (socket.data.noteAccess) {
+          delete socket.data.noteAccess[noteId];
+        }
+        
         logger.info({ msg: "User left note room", noteId, userId });
       } catch (error) {
         logger.error({ msg: "Error leaving note room", error });
