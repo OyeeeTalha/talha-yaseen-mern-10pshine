@@ -71,7 +71,7 @@ export const getSession = async () => {
   }
 };
 
-export const handleGoogleSignIn = async () => {
+export const handleGoogleSignIn = async (callbackUrl?: string) => {
   try {
     const csrfToken = await fetchCsrfToken();
 
@@ -89,12 +89,13 @@ export const handleGoogleSignIn = async () => {
     const callbackInput = document.createElement("input");
     callbackInput.type = "hidden";
     callbackInput.name = "callbackUrl";
-    callbackInput.value = `${APP_URL}/dashboard`;
+    // Use provided callback or default to dashboard
+    callbackInput.value = callbackUrl || `${APP_URL}/dashboard`;
     form.appendChild(callbackInput);
 
     document.body.appendChild(form);
 
-    logger.info({ msg: "Initiating Google sign-in" });
+    logger.info({ msg: "Initiating Google sign-in", callbackUrl: callbackInput.value });
     form.submit();
 
     document.body.removeChild(form);

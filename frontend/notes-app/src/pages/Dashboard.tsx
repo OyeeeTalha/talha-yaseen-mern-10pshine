@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/layouts/Sidebar";
 import NoteCard from "@/components/layouts/NoteCard";
+import { ShareNoteModal } from "@/components/ShareNoteModal";
 import { getGreeting } from "@/lib/utils";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
@@ -37,6 +38,7 @@ function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("All Notes");
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [shareNoteId, setShareNoteId] = useState<string | null>(null);
   // Load view mode from localStorage or default to "grid"
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     const saved = localStorage.getItem("notesViewMode");
@@ -74,6 +76,8 @@ function Dashboard() {
     profileData?.data?.user?.firstName ||
     profileData?.data?.user?.name?.split(" ")[0] ||
     "User";
+
+  const currentUserId = profileData?.data?.user?._id;
 
   const handleCreateNote = () => {
     createNote(
@@ -193,20 +197,28 @@ function Dashboard() {
 
     // Category filter
     if (selectedCategory === "All Notes") {
-      return filtered.filter((n) => !n.isDeleted && !n.isTrash);
+      const currentUserId = profileData?.data?.user?._id;
+      return filtered.filter(
+        (n) =>
+          !n.isDeleted &&
+          !n.isTrash &&
+          (currentUserId ? n.userId === currentUserId : true),
+      );
     } else if (selectedCategory === "Favorites") {
       return filtered.filter((n) => n.isFavorite && !n.isDeleted && !n.isTrash);
     } else if (selectedCategory === "Trash") {
       return filtered.filter((n) => n.isTrash || n.isDeleted);
-    } else if (selectedCategory === "Recent") {
-      return filtered
-        .filter((n) => !n.isDeleted && !n.isTrash)
-        .sort((a, b) => {
-          const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-          const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-          return dateB - dateA;
-        })
-        .slice(0, 10);
+    } else if (selectedCategory === "Shared") {
+      const currentUserId = profileData?.data?.user?._id;
+      return filtered.filter(
+        (n) =>
+          !n.isDeleted &&
+          !n.isTrash &&
+          currentUserId &&
+          (n.userId !== currentUserId || // Shared with me (I am not owner)
+            (n.sharedWith && n.sharedWith.length > 0) || // Shared by me and someone accessed it
+            !!n.shareId) // Shared by me (link generated)
+      );
     } else {
       // Category filter - filter by categoryName from backend
       return filtered.filter(
@@ -214,10 +226,16 @@ function Dashboard() {
           n.categoryName === selectedCategory && !n.isDeleted && !n.isTrash,
       );
     }
-  }, [notes, selectedCategory, searchQuery]);
+  }, [notes, selectedCategory, searchQuery, profileData]);
 
-  const pinnedNotes = filteredNotes.filter((n) => n.isPinned);
-  const otherNotes = filteredNotes.filter((n) => !n.isPinned);
+  const showPinnedSection =
+    selectedCategory !== "Trash" && selectedCategory !== "Shared";
+  const pinnedNotes = showPinnedSection
+    ? filteredNotes.filter((n) => n.isPinned)
+    : [];
+  const otherNotes = showPinnedSection
+    ? filteredNotes.filter((n) => !n.isPinned)
+    : filteredNotes;
 
   const displayedPinnedNotes = isPinnedExpanded
     ? pinnedNotes
@@ -239,6 +257,15 @@ function Dashboard() {
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />
+
+      {/* Share Note Modal */}
+      {shareNoteId && (
+        <ShareNoteModal
+          noteId={shareNoteId}
+          isOpen={!!shareNoteId}
+          onClose={() => setShareNoteId(null)}
+        />
+      )}
 
       <Sidebar
         activeItem={selectedCategory}
@@ -307,12 +334,17 @@ function Dashboard() {
                       categoryId={note.category}
                       categoryName={note.categoryName}
                       categoryIndex={note.categoryIndex}
+                      editors={note.editors}
+                      isOwner={
+                        currentUserId ? note.userId === currentUserId : false
+                      }
                       onPinClick={() =>
                         handlePinToggle(note._id, note.isPinned || false)
                       }
                       onFavoriteClick={() =>
                         handleFavoriteToggle(note._id, note.isFavorite || false)
                       }
+                      onShareClick={() => note._id && setShareNoteId(note._id)}
                       onRestore={() => handleRestore(note._id)}
                       onDelete={() => handleTrash(note._id)}
                       onAutoDelete={() => handleAutoPermanentDelete(note._id)}
@@ -408,6 +440,11 @@ function Dashboard() {
                           Categories
                         </span>
                       </div>
+                      <div className="w-24 shrink-0">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          Editors
+                        </span>
+                      </div>
                       <div className="w-24 shrink-0 text-right">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                           Last Edited
@@ -438,6 +475,10 @@ function Dashboard() {
                         categoryName={note.categoryName}
                         categoryIndex={note.categoryIndex}
                         viewMode={viewMode}
+                        editors={note.editors}
+                        isOwner={
+                          currentUserId ? note.userId === currentUserId : false
+                        }
                         onPinClick={() =>
                           handlePinToggle(note._id, note.isPinned || false)
                         }
@@ -447,6 +488,7 @@ function Dashboard() {
                             note.isFavorite || false,
                           )
                         }
+                        onShareClick={() => note._id && setShareNoteId(note._id)}
                         onRestore={() => handleRestore(note._id)}
                         onDelete={() =>
                           selectedCategory === "Trash"

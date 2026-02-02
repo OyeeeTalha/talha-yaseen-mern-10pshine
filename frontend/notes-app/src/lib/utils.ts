@@ -174,3 +174,41 @@ export function debounce<T extends (...args: unknown[]) => void>(
 
   return debouncedFunc;
 }
+
+export const getAvatarUrl = (avatar: string): string => {
+  const avatarMap: Record<string, string> = {
+    "default-avatar-1": "/icons/avatars/man.png",
+    "default-avatar-2": "/icons/avatars/woman.png",
+    "default-avatar-3": "/icons/avatars/arab-woman.png",
+    "default-avatar-4": "/icons/avatars/doctor.png",
+    "default-avatar-5": "/icons/avatars/woman (1).png",
+    "default-avatar-6": "/icons/avatars/woman (2).png",
+    "default-avatar-7": "/icons/avatars/boy.png",
+    "default-avatar-8": "/icons/avatars/boy (1).png",
+  };
+  return avatarMap[avatar] || avatar;
+};
+
+export const getInitials = (name?: string, email?: string): string => {
+  if (name) {
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+  if (email) {
+    return email.substring(0, 2).toUpperCase();
+  }
+  return "??";
+};
+
+export const isValidImageUrl = (image?: string): boolean => {
+  if (!image) return false;
+  return (
+    image.startsWith("http://") ||
+    image.startsWith("https://") ||
+    image.startsWith("data:") ||
+    image.startsWith("/")
+  );
+};
