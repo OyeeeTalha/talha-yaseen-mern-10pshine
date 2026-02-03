@@ -11,6 +11,7 @@ import { authConfig } from "./features/auth/config.js";
 import noteRoutes from "./features/notes/routes.js";
 
 import userRoutes from "./features/user/routes.js";
+import contactRoutes from "./features/contact/routes.js";
 
 const app: Application = express();
 
@@ -53,6 +54,8 @@ app.use("/auth", ExpressAuth(authConfig));
 app.use("/notes", noteRoutes);
 
 app.use("/user", userRoutes);
+
+app.use("/", contactRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({
