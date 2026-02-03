@@ -8,6 +8,7 @@ import LoadingSpinner from "@/components/ui/loading";
 
 // Lazy load SharedNotePage
 const SharedNotePage = lazy(() => import("@/pages/SharedNotePage"));
+const AccountDeactivated = lazy(() => import("@/pages/AccountDeactivated"));
 
 const AppRoutes = () => {
   const { user, isLoading } = UserAuth();
@@ -35,6 +36,19 @@ const AppRoutes = () => {
           <Suspense fallback={<LoadingSpinner />}>
             <SharedNotePage />
           </Suspense>
+        }
+      />
+
+      <Route
+        path="/account-deactivated"
+        element={
+          user ? (
+            <Suspense fallback={<LoadingSpinner />}>
+              <AccountDeactivated />
+            </Suspense>
+          ) : (
+            <Navigate to="/" replace />
+          )
         }
       />
 
