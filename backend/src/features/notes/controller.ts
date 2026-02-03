@@ -10,7 +10,7 @@ import {
   updateNoteSchema,
   createCategorySchema,
 } from "./schema.js";
-import { TRASH_PERIOD_SECONDS } from "../../config/trash.config.js";
+import { TRASH_PERIOD_SECONDS } from "../../config/timers.config.js";
 
 // Helper function to convert category IDs to names and indices in notes
 // Also populates sharedWith user details and editors from editHistory

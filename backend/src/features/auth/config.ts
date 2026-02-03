@@ -5,6 +5,8 @@ import clientPromise from "./db.js";
 import { AppError } from "../../shared/errors/AppError.js";
 import logger from "../../shared/utils/logger.js";
 import { UserModel } from "../../models/User.js";
+import { NoteModel } from "../../models/Notes.js";
+import { ACCOUNT_DEACTIVATION_GRACE_PERIOD_SECONDS } from "../../config/timers.config.js";
 
 const myAdapter = MongoDBAdapter(clientPromise);
 
@@ -91,20 +93,38 @@ export const authConfig = {
         if (account && account.provider === "google") {
           const googleId = profile.sub || user.id;
 
+          // Prepare update fields
+          const updateFields: any = {
+            accessToken: account.access_token,
+            tokenExpiresAt: account.expires_at
+              ? new Date(account.expires_at * 1000)
+              : null,
+          };
+
+          // Only update refresh token if provided (Google only sends it on first consent or forced consent)
+          if (account.refresh_token) {
+            updateFields.refreshToken = account.refresh_token;
+          }
+
           // Update user with tokens
-          await UserModel.findOneAndUpdate(
+          const dbUser = await UserModel.findOneAndUpdate(
             { googleId },
-            {
-              $set: {
-                accessToken: account.access_token,
-                refreshToken: account.refresh_token,
-                tokenExpiresAt: account.expires_at
-                  ? new Date(account.expires_at * 1000)
-                  : null,
-              },
-            },
-            { upsert: false },
+            { $set: updateFields },
+            { upsert: false, new: true },
           );
+
+          if (dbUser && dbUser.isDeactivated && dbUser.deactivatedAt) {
+            const gracePeriodSeconds = ACCOUNT_DEACTIVATION_GRACE_PERIOD_SECONDS;
+            const now = Math.floor(Date.now() / 1000);
+            const deactivatedAt = dbUser.deactivatedAt as unknown as number;
+            const timeSinceDeactivation = now - deactivatedAt;
+
+            if (timeSinceDeactivation > gracePeriodSeconds) {
+               // Grace period expired, mark all notes as deleted
+               await NoteModel.updateMany({ userId: dbUser._id }, { isDeleted: true });
+               logger.info(`Grace period expired for user ${dbUser.email}. Notes marked as deleted.`);
+            }
+          }
 
           logger.info(`Tokens stored for user: ${user.email}`);
         }
@@ -131,6 +151,9 @@ export const authConfig = {
           session.user.avatarBgColor = dbUser.avatarBgColor;
           session.user.categories = dbUser.catagories;
           session.user.isDeleted = dbUser.isDeleted;
+          session.user.isDeactivated = dbUser.isDeactivated;
+          session.user.deactivatedAt = dbUser.deactivatedAt;
+          session.user.reactivationRequestSubmitted = dbUser.reactivationRequestSubmitted;
           // Don't expose tokens in session for security
         } else {
           session.user.id = user.id;
