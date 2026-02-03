@@ -229,7 +229,7 @@ function Editor() {
     const handleBeforeUnload = () => {
       // Only save if content was loaded and user can edit
       if (!isContentLoaded || isReadOnly) return;
-      
+
       // Use synchronous save for page unload (Beacon API)
       const finalPayload = {
         noteId,
@@ -436,24 +436,22 @@ function Editor() {
                     Shared by {sharedOwnerName}
                   </span>
                   <span
-                    className={`text-xs flex items-center gap-1 ${
-                      isReadOnly ? "text-orange-400" : "text-green-400"
-                    }`}
+                    className={`text-xs flex items-center gap-1 ${isReadOnly ? "text-orange-400" : "text-green-400"
+                      }`}
                   >
                     {isReadOnly ? "Read-only access" : "Can edit"}
                   </span>
                   {/* Autosave Status for shared notes with edit access */}
                   {!isReadOnly && autosaveStatus !== "idle" && (
                     <span
-                      className={`text-xs ${
-                        autosaveStatus === "saving"
-                          ? "text-yellow-400"
-                          : autosaveStatus === "saved"
-                            ? "text-green-400"
-                            : autosaveStatus === "offline"
-                              ? "text-orange-400"
-                              : "text-red-400"
-                      }`}
+                      className={`text-xs ${autosaveStatus === "saving"
+                        ? "text-yellow-400"
+                        : autosaveStatus === "saved"
+                          ? "text-green-400"
+                          : autosaveStatus === "offline"
+                            ? "text-orange-400"
+                            : "text-red-400"
+                        }`}
                     >
                       {autosaveStatus === "saving" && "Saving..."}
                       {autosaveStatus === "saved" &&
@@ -476,15 +474,14 @@ function Editor() {
                   {/* Autosave Status Indicator */}
                   {autosaveStatus !== "idle" && (
                     <span
-                      className={`text-xs ${
-                        autosaveStatus === "saving"
-                          ? "text-yellow-400"
-                          : autosaveStatus === "saved"
-                            ? "text-green-400"
-                            : autosaveStatus === "offline"
-                              ? "text-orange-400"
-                              : "text-red-400"
-                      }`}
+                      className={`text-xs ${autosaveStatus === "saving"
+                        ? "text-yellow-400"
+                        : autosaveStatus === "saved"
+                          ? "text-green-400"
+                          : autosaveStatus === "offline"
+                            ? "text-orange-400"
+                            : "text-red-400"
+                        }`}
                     >
                       {autosaveStatus === "saving" && "Saving..."}
                       {autosaveStatus === "saved" &&
@@ -575,141 +572,142 @@ function Editor() {
 
               {/* Meta Controls */}
               <div className="flex flex-col gap-4">
-                {/* Category Selector */}
-                <div className="flex items-center gap-3 text-gray-400 group relative">
-                  <div className="w-8 flex justify-center">
-                    <CategoryRoundedIcon sx={{ fontSize: 20 }} />
-                  </div>
-                  <span className="text-sm w-20">Category</span>
+                {/* Category Selector - Only visible to owner */}
+                {noteData?.userId === profileData?.data?.user?._id && (
+                  <div className="flex items-center gap-3 text-gray-400 group relative">
+                    <div className="w-8 flex justify-center">
+                      <CategoryRoundedIcon sx={{ fontSize: 20 }} />
+                    </div>
+                    <span className="text-sm w-20">Category</span>
 
-                  <div className="relative">
-                    <button
-                      onClick={() =>
-                        setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
-                      }
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-white/10 hover:bg-white/5 text-gray-300 transition-all min-w-35 justify-between"
-                    >
-                      <span>{selectedCategoryName}</span>
-                      <KeyboardArrowDownRoundedIcon
-                        sx={{ fontSize: 18 }}
-                        className={`transition-transform duration-200 ${
-                          isCategoryDropdownOpen ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
+                        }
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-white/10 hover:bg-white/5 text-gray-300 transition-all min-w-35 justify-between"
+                      >
+                        <span>{selectedCategoryName}</span>
+                        <KeyboardArrowDownRoundedIcon
+                          sx={{ fontSize: 18 }}
+                          className={`transition-transform duration-200 ${isCategoryDropdownOpen ? "rotate-180" : ""
+                            }`}
+                        />
+                      </button>
 
-                    {isCategoryDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-2 w-56 bg-[#161b22] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                        <div className="p-1">
-                          <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                            {/* Void option */}
-                            <button
-                              onClick={() => {
-                                const newCategoryId = null;
-                                setSelectedCategoryId(newCategoryId);
-                                setIsCategoryDropdownOpen(false);
+                      {isCategoryDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-2 w-56 bg-[#161b22] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                          <div className="p-1">
+                            <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                              {/* Void option */}
+                              <button
+                                onClick={() => {
+                                  const newCategoryId = null;
+                                  setSelectedCategoryId(newCategoryId);
+                                  setIsCategoryDropdownOpen(false);
 
-                                // Optimistically update the note's category
-                                if (noteId) {
-                                  updateNote.mutate({
-                                    id: noteId,
-                                    data: {
-                                      title,
-                                      category: newCategoryId,
-                                      tags,
-                                      content: JSON.stringify(editor.document),
-                                    },
-                                  });
-                                }
-                              }}
-                              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
-                                selectedCategoryId === null
+                                  // Optimistically update the note's category
+                                  if (noteId) {
+                                    updateNote.mutate({
+                                      id: noteId,
+                                      data: {
+                                        title,
+                                        category: newCategoryId,
+                                        tags,
+                                        content: JSON.stringify(
+                                          editor.document,
+                                        ),
+                                      },
+                                    });
+                                  }
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${selectedCategoryId === null
                                   ? "bg-primary/10 text-primary"
                                   : "text-gray-300 hover:bg-white/5"
-                              }`}
-                            >
-                              Void
-                              {selectedCategoryId === null && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                              )}
-                            </button>
-                            {/* Filter out Void category from the list */}
-                            {categories
-                              .filter(
-                                (cat) => cat.name.toLowerCase() !== "void",
-                              )
-                              .map((cat) => (
-                                <button
-                                  key={cat.id}
-                                  onClick={() => {
-                                    const newCategoryId = cat.id;
-                                    setSelectedCategoryId(newCategoryId);
-                                    setIsCategoryDropdownOpen(false);
+                                  }`}
+                              >
+                                Void
+                                {selectedCategoryId === null && (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                )}
+                              </button>
+                              {/* Filter out Void category from the list */}
+                              {categories
+                                .filter(
+                                  (cat) => cat.name.toLowerCase() !== "void",
+                                )
+                                .map((cat) => (
+                                  <button
+                                    key={cat.id}
+                                    onClick={() => {
+                                      const newCategoryId = cat.id;
+                                      setSelectedCategoryId(newCategoryId);
+                                      setIsCategoryDropdownOpen(false);
 
-                                    // Optimistically update the note's category
-                                    if (noteId) {
-                                      updateNote.mutate({
-                                        id: noteId,
-                                        data: {
-                                          title,
-                                          category: newCategoryId,
-                                          tags,
-                                          content: JSON.stringify(
-                                            editor.document,
-                                          ),
-                                        },
-                                      });
-                                    }
-                                  }}
-                                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
-                                    selectedCategoryId === cat.id
+                                      // Optimistically update the note's category
+                                      if (noteId) {
+                                        updateNote.mutate({
+                                          id: noteId,
+                                          data: {
+                                            title,
+                                            category: newCategoryId,
+                                            tags,
+                                            content: JSON.stringify(
+                                              editor.document,
+                                            ),
+                                          },
+                                        });
+                                      }
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${selectedCategoryId === cat.id
                                       ? "bg-primary/10 text-primary"
                                       : "text-gray-300 hover:bg-white/5"
-                                  }`}
+                                      }`}
+                                  >
+                                    {cat.name}
+                                    {selectedCategoryId === cat.id && (
+                                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                    )}
+                                  </button>
+                                ))}
+                            </div>
+                            <div className="border-t border-white/10 mt-1 pt-1 px-2 py-2">
+                              <div className="flex items-center gap-2 bg-[#0d1117] px-2 py-1.5 rounded-md border border-white/5 focus-within:border-primary/50 transition-colors">
+                                <input
+                                  type="text"
+                                  value={newCategoryInput}
+                                  onChange={(e) =>
+                                    setNewCategoryInput(e.target.value)
+                                  }
+                                  placeholder="New category..."
+                                  className="bg-transparent text-xs text-white placeholder-gray-500 outline-none w-full"
+                                  onKeyDown={(e) =>
+                                    e.key === "Enter" && handleAddCategory()
+                                  }
+                                />
+                                <button
+                                  onClick={handleAddCategory}
+                                  disabled={!newCategoryInput.trim()}
+                                  className="text-gray-400 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
-                                  {cat.name}
-                                  {selectedCategoryId === cat.id && (
-                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                  )}
+                                  <AddRoundedIcon sx={{ fontSize: 16 }} />
                                 </button>
-                              ))}
-                          </div>
-                          <div className="border-t border-white/10 mt-1 pt-1 px-2 py-2">
-                            <div className="flex items-center gap-2 bg-[#0d1117] px-2 py-1.5 rounded-md border border-white/5 focus-within:border-primary/50 transition-colors">
-                              <input
-                                type="text"
-                                value={newCategoryInput}
-                                onChange={(e) =>
-                                  setNewCategoryInput(e.target.value)
-                                }
-                                placeholder="New category..."
-                                className="bg-transparent text-xs text-white placeholder-gray-500 outline-none w-full"
-                                onKeyDown={(e) =>
-                                  e.key === "Enter" && handleAddCategory()
-                                }
-                              />
-                              <button
-                                onClick={handleAddCategory}
-                                disabled={!newCategoryInput.trim()}
-                                className="text-gray-400 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <AddRoundedIcon sx={{ fontSize: 16 }} />
-                              </button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      )}
+                    </div>
+
+                    {/* Overlay to close dropdown when clicking outside */}
+                    {isCategoryDropdownOpen && (
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsCategoryDropdownOpen(false)}
+                      />
                     )}
                   </div>
-
-                  {/* Overlay to close dropdown when clicking outside */}
-                  {isCategoryDropdownOpen && (
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsCategoryDropdownOpen(false)}
-                    />
-                  )}
-                </div>
+                )}
 
                 {/* Tags Input */}
                 <div className="flex items-start gap-3 text-gray-400 group">
@@ -724,22 +722,26 @@ function Editor() {
                         className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-800 text-gray-300 text-xs border border-white/5 group-hover:border-white/10"
                       >
                         {tag}
-                        <button
-                          onClick={() => removeTag(tag)}
-                          className="hover:text-white ml-1"
-                        >
-                          &times;
-                        </button>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => removeTag(tag)}
+                            className="hover:text-white ml-1"
+                          >
+                            &times;
+                          </button>
+                        )}
                       </span>
                     ))}
-                    <input
-                      type="text"
-                      className="bg-transparent text-sm text-white placeholder-gray-600 outline-none min-w-30"
-                      placeholder="Add a tag..."
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={handleAddTag}
-                    />
+                    {!isReadOnly && (
+                      <input
+                        type="text"
+                        className="bg-transparent text-sm text-white placeholder-gray-600 outline-none min-w-30"
+                        placeholder="Add a tag..."
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={handleAddTag}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
