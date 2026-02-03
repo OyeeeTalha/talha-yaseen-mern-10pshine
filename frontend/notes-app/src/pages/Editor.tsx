@@ -11,6 +11,11 @@ import LocalOfferRoundedIcon from "@mui/icons-material/LocalOfferRounded";
 import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
+import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
+
 import { Button } from "@/components/ui/button";
 import { useGetNoteById, useUpdateNote } from "@/hooks/useNotes";
 import { useGetCategories, useCreateCategory } from "@/hooks/useCategories";
@@ -508,6 +513,116 @@ function Editor() {
                 <span>Share</span>
               </button>
             )}
+
+            {/* Export Menu */}
+            <div className="relative group/export">
+              <button className="flex items-center gap-2 px-4 py-2 bg-white/5 text-gray-300 hover:bg-white/10 rounded-full text-sm font-medium transition-all">
+                <FileDownloadRoundedIcon sx={{ fontSize: 18 }} />
+                <span>Export</span>
+              </button>
+              <div className="absolute top-full right-0 mt-2 w-48 bg-[#161b22] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden hidden group-hover/export:block animate-in fade-in zoom-in-95 duration-100">
+                <button
+                  onClick={async () => {
+                    if (!editor) return;
+                    const markdown = await editor.blocksToMarkdownLossy(
+                      editor.document,
+                    );
+                    const fullMarkdown = `# ${title}\n\n${markdown}`;
+                    const blob = new Blob([fullMarkdown], { type: "text/markdown" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${title}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <CodeRoundedIcon sx={{ fontSize: 16 }} />
+                  Markdown (.md)
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!editor) return;
+                    const html = await editor.blocksToHTMLLossy(editor.document);
+                    const fullHtml = `<!DOCTYPE html><html><head><title>${title}</title><meta charset="utf-8"></head><body style="font-family: sans-serif; padding: 20px;"><h1>${title}</h1>${html}</body></html>`;
+                    const blob = new Blob([fullHtml], { type: "text/html" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${title}.html`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <CodeRoundedIcon sx={{ fontSize: 16 }} />
+                  HTML (.html)
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!editor) return;
+                    const html = await editor.blocksToHTMLLossy(editor.document);
+
+                    // Dynamic import to keep bundle size small
+                    const html2pdf = (await import("html2pdf.js")).default;
+
+                    const element = document.createElement("div");
+                    element.innerHTML = `<h1>${title}</h1>${html}`;
+                    element.style.padding = "20px";
+                    element.style.fontFamily = "sans-serif";
+                    element.style.color = "black";
+                    element.style.background = "white";
+
+                    const opt = {
+                      margin: 1,
+                      filename: `${title}.pdf`,
+                      image: { type: 'jpeg', quality: 0.98 },
+                      html2canvas: { scale: 2 },
+                      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                    };
+
+                    html2pdf().set(opt).from(element).save();
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <PictureAsPdfRoundedIcon sx={{ fontSize: 16 }} />
+                  PDF (.pdf)
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!editor) return;
+                    const html = await editor.blocksToHTMLLossy(editor.document);
+                    const header =
+                      "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                      "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                      "xmlns='http://www.w3.org/TR/REC-html40'>" +
+                      "<head><meta charset='utf-8'><title>" +
+                      title +
+                      "</title></head><body><h1>" +
+                      title +
+                      "</h1>";
+                    const footer = "</body></html>";
+                    const sourceHTML = header + html + footer;
+
+                    const blob = new Blob(["\ufeff", sourceHTML], {
+                      type: "application/msword",
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${title}.doc`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <DescriptionRoundedIcon sx={{ fontSize: 16 }} />
+                  Word Document
+                </button>
+              </div>
+            </div>
+
             {/* Only show Save button when user can edit */}
             {canEdit && (
               <button
