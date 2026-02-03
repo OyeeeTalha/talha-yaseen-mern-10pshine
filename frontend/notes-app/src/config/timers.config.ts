@@ -17,4 +17,6 @@ export const TRASH_PERIOD_SECONDS = 2592000; // 30 days (production)
 export const ACCOUNT_DEACTIVATION_GRACE_PERIOD_SECONDS = 2592000; // 30 days
 // export const ACCOUNT_DEACTIVATION_GRACE_PERIOD_SECONDS = 60; // 1 minute (testing)
 
-export const REACTIVATION_REQUEST_COOLDOWN_SECONDS = 172800; // 2 days
+export const REACTIVATION_REQUEST_COOLDOWN_SECONDS = 604800
+
+export const CONTACT_US_COOLDOWN_SECONDS = 604800; // 7 days (production)
