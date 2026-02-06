@@ -8,7 +8,7 @@ import { Types } from "mongoose";
 import {
   createNoteSchema,
   updateNoteSchema,
-  shareNoteSchema,
+  createCategorySchema,
 } from "./schema.js";
 import { TRASH_PERIOD_SECONDS } from "../../config/timers.config.js";
 
