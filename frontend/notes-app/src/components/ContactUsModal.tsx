@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import AccessTimeFilledRoundedIcon from "@mui/icons-material/AccessTimeFilledRounded";
 import { useToast } from "@/hooks/useToast";
-import { CONTACT_US_COOLDOWN_SECONDS } from "@/config/timers.config";
+// Local fallback for UX; Backend enforces this via SubmissionLog
+const CONTACT_US_COOLDOWN_SECONDS = 604800; // 7 days
 
 interface ContactUsModalProps {
     isOpen: boolean;

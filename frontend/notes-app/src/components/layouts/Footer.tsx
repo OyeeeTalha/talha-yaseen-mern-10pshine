@@ -2,7 +2,6 @@ import { useState } from "react";
 import EditNoteRoundedIcon from "@mui/icons-material/EditNoteRounded";
 import { useToast } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/ui/toast";
-import { CONTACT_US_COOLDOWN_SECONDS } from "@/config/timers.config";
 
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -12,19 +11,7 @@ function ComplexFooter() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleJoinWaitlist = async () => {
-    // 0. Check Rate Limit (Waitlist uses same cooldown as Contact)
-    const LAST_WAITLIST_KEY = "mantiq_last_waitlist_ts";
-    const lastWaitlistTime = localStorage.getItem(LAST_WAITLIST_KEY);
-    if (lastWaitlistTime) {
-      const COOLDOWN_MS = CONTACT_US_COOLDOWN_SECONDS * 1000;
-      const timeSinceLast = Date.now() - parseInt(lastWaitlistTime, 10);
-      if (timeSinceLast < COOLDOWN_MS) {
-        showError("You're already on the list! We'll be in touch soon.");
-        return;
-      }
-    }
-
-    // 1. Basic Email Format Validation
+    // Basic Email Format Validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       showError("Please enter a valid email address.");
@@ -46,9 +33,6 @@ function ComplexFooter() {
         const data = await response.json();
         throw new Error(data.message || "Failed to join waitlist");
       }
-
-      // Update Rate Limit Timestamp
-      localStorage.setItem(LAST_WAITLIST_KEY, Date.now().toString());
 
       success("Welcome to the waitlist! Keep an eye on your inbox.");
       setEmail("");

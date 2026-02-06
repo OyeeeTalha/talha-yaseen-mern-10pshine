@@ -35,6 +35,7 @@ type NoteCardProps = {
   isFavorite?: boolean;
   isTrash?: boolean;
   trashedAt?: number | null;
+  expireAt?: string | null;
   categoryId?: string | null;
   categoryName?: string;
   categoryIndex?: number | null; // For color generation
@@ -60,6 +61,7 @@ function NoteCard(props: NoteCardProps) {
     isFavorite,
     isTrash,
     trashedAt,
+    expireAt,
     categoryId,
     categoryName,
     categoryIndex,
@@ -123,7 +125,7 @@ function NoteCard(props: NoteCardProps) {
   // Editor avatars component - shows users who have edited the note
   const EditorAvatars = () => {
     if (editors.length === 0) return null;
-    
+
     const displayedEditors = editors.slice(0, 3);
     const remaining = editors.length - 3;
 
@@ -161,9 +163,9 @@ function NoteCard(props: NoteCardProps) {
 
   // Update timer for trashed notes
   useEffect(() => {
-    if (isTrash && trashedAt) {
+    if (isTrash && expireAt) {
       const updateTimer = () => {
-        const { formattedTime, isExpired } = calculateTimeRemaining(trashedAt);
+        const { formattedTime, isExpired } = calculateTimeRemaining(expireAt);
         setTimeRemaining(formattedTime);
 
         // Auto-delete when expired (without confirmation)
@@ -177,7 +179,7 @@ function NoteCard(props: NoteCardProps) {
 
       return () => clearInterval(interval);
     }
-  }, [isTrash, trashedAt, onAutoDelete]);
+  }, [isTrash, expireAt, onAutoDelete]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -205,8 +207,8 @@ function NoteCard(props: NoteCardProps) {
             if (block.content) {
               return Array.isArray(block.content)
                 ? block.content
-                    .map((c: { text?: string }) => c.text || "")
-                    .join("")
+                  .map((c: { text?: string }) => c.text || "")
+                  .join("")
                 : "";
             }
             return "";
@@ -253,11 +255,11 @@ function NoteCard(props: NoteCardProps) {
           {/* Category - Fixed width column */}
           <div className="w-32 shrink-0">
             {categoryName &&
-            categoryId !== null &&
-            categoryId !== undefined &&
-            categoryName.toLowerCase() !== "void" &&
-            categoryIndex !== null &&
-            categoryIndex !== undefined ? (
+              categoryId !== null &&
+              categoryId !== undefined &&
+              categoryName.toLowerCase() !== "void" &&
+              categoryIndex !== null &&
+              categoryIndex !== undefined ? (
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border"
                 style={{
@@ -341,7 +343,7 @@ function NoteCard(props: NoteCardProps) {
                 </button>
               </>
             ) : (
-                          <>
+              <>
                 {isOwner && (
                   <button
                     type="button"
@@ -459,11 +461,11 @@ function NoteCard(props: NoteCardProps) {
               <>
                 {/* Category Badge */}
                 {categoryName &&
-                categoryId !== null &&
-                categoryId !== undefined &&
-                categoryName.toLowerCase() !== "void" &&
-                categoryIndex !== null &&
-                categoryIndex !== undefined ? (
+                  categoryId !== null &&
+                  categoryId !== undefined &&
+                  categoryName.toLowerCase() !== "void" &&
+                  categoryIndex !== null &&
+                  categoryIndex !== undefined ? (
                   <span
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border"
                     style={{

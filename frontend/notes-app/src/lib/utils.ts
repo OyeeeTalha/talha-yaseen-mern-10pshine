@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { TRASH_PERIOD_SECONDS } from "../config/timers.config";
+
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -79,7 +79,7 @@ export const formatDate = (dateString?: string | Date): string => {
 };
 
 export const calculateTimeRemaining = (
-  trashedAt: number,
+  expireAt: string | number | Date,
 ): {
   isExpired: boolean;
   daysLeft: number;
@@ -89,8 +89,17 @@ export const calculateTimeRemaining = (
   formattedTime: string;
 } => {
   const currentTime = Math.floor(Date.now() / 1000);
-  const deleteAt = trashedAt + TRASH_PERIOD_SECONDS;
-  const secondsRemaining = deleteAt - currentTime;
+
+  // Convert input to Unix seconds
+  let expireTimestamp: number;
+  if (typeof expireAt === "string" || expireAt instanceof Date) {
+    expireTimestamp = Math.floor(new Date(expireAt).getTime() / 1000);
+  } else {
+    // Assuming number input is already a timestamp (seconds)
+    expireTimestamp = expireAt;
+  }
+
+  const secondsRemaining = expireTimestamp - currentTime;
 
   if (secondsRemaining <= 0) {
     return {
