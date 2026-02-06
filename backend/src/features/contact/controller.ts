@@ -1,15 +1,27 @@
 import { Request, Response } from "express";
 import ContactModel from "./model.js";
 import WaitlistModel from "./waitlist.model.js";
+import SubmissionLogModel from "./submissionLog.model.js";
 import nodemailer from "nodemailer";
 import logger from "../../shared/utils/logger.js";
+import { CONTACT_US_COOLDOWN_SECONDS } from "../../config/timers.config.js";
 
 export const handleContactSubmission = async (req: Request, res: Response) => {
     try {
         const { email, subject, message } = req.body;
+        const ip = req.ip || req.socket.remoteAddress || "unknown";
 
         if (!email || !message) {
             return res.status(400).json({ error: true, message: "Email and message are required" });
+        }
+
+        // Check Rate Limit
+        const existingLog = await SubmissionLogModel.findOne({ ip, action: "contact" });
+        if (existingLog) {
+            return res.status(429).json({
+                error: true,
+                message: "You have already sent a message recently. Please try again later.",
+            });
         }
 
         // Send Email - No DB Storage for Contact Form as requested
@@ -45,6 +57,13 @@ export const handleContactSubmission = async (req: Request, res: Response) => {
             return res.status(500).json({ error: true, message: "Failed to send message. Please try again later." });
         }
 
+        // Log Submission for Rate Limiting
+        await SubmissionLogModel.create({
+            ip,
+            action: "contact",
+            expireAt: new Date(Date.now() + CONTACT_US_COOLDOWN_SECONDS * 1000)
+        });
+
         return res.status(201).json({
             error: false,
             message: "Message received successfully",
@@ -58,9 +77,19 @@ export const handleContactSubmission = async (req: Request, res: Response) => {
 export const handleWaitlistSubmission = async (req: Request, res: Response) => {
     try {
         const { email, type } = req.body;
+        const ip = req.ip || req.socket.remoteAddress || "unknown";
 
         if (!email) {
             return res.status(400).json({ error: true, message: "Email is required" });
+        }
+
+        // Check Rate Limit
+        const existingLog = await SubmissionLogModel.findOne({ ip, action: "waitlist" });
+        if (existingLog) {
+            return res.status(429).json({
+                error: true,
+                message: "You have joined the waitlist recently.",
+            });
         }
 
         const existingEntry = await WaitlistModel.findOne({ email });
@@ -109,6 +138,13 @@ export const handleWaitlistSubmission = async (req: Request, res: Response) => {
             logger.error(`Failed to send waitlist notification: ${mailError}`);
             // Continue since DB save was successful
         }
+
+        // Log Submission for Rate Limiting
+        await SubmissionLogModel.create({
+            ip,
+            action: "waitlist",
+            expireAt: new Date(Date.now() + CONTACT_US_COOLDOWN_SECONDS * 1000)
+        });
 
         return res.status(201).json({
             error: false,

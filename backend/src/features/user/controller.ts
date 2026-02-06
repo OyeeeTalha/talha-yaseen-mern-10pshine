@@ -4,7 +4,7 @@ import { AppError } from "../../shared/errors/AppError.js";
 import { catchAsync } from "../../shared/utils/catchAsync.js";
 import { updateProfileSchema } from "./schema.js";
 import logger from "../../shared/utils/logger.js";
-import { 
+import {
   ACCOUNT_DEACTIVATION_GRACE_PERIOD_SECONDS,
   REACTIVATION_REQUEST_COOLDOWN_SECONDS
 } from "../../config/timers.config.js";
@@ -99,6 +99,7 @@ export const deactivateAccount = catchAsync(
     }
 
     const deactivatedAt = Math.floor(Date.now() / 1000); // Current time in Unix seconds
+    const deactivationExpireAt = new Date(Date.now() + ACCOUNT_DEACTIVATION_GRACE_PERIOD_SECONDS * 1000);
 
     const user = await UserModel.findByIdAndUpdate(
       userId,
@@ -106,6 +107,7 @@ export const deactivateAccount = catchAsync(
         $set: {
           isDeactivated: true,
           deactivatedAt: deactivatedAt,
+          deactivationExpireAt: deactivationExpireAt,
           isDeleted: false, // Ensure not deleted yet
         },
       },
@@ -154,11 +156,11 @@ export const cancelDeactivation = catchAsync(
     }
 
     user.isDeactivated = false;
-    user.deactivatedAt = null; 
-    
+    user.deactivatedAt = null;
+
     await UserModel.findByIdAndUpdate(userId, {
-        $set: { isDeactivated: false },
-        $unset: { deactivatedAt: 1 }
+      $set: { isDeactivated: false },
+      $unset: { deactivatedAt: 1, deactivationExpireAt: 1 }
     });
 
     logger.info(`User account reactivated: ${user.email}`);
@@ -187,13 +189,13 @@ export const submitReactivationRequest = catchAsync(
     }
 
     if (user.reactivationRequestSubmitted && user.reactivationRequestSubmittedAt) {
-       const now = Math.floor(Date.now() / 1000);
-       const lastRequestTime = user.reactivationRequestSubmittedAt as unknown as number;
-       const timeSince = now - lastRequestTime;
+      const now = Math.floor(Date.now() / 1000);
+      const lastRequestTime = user.reactivationRequestSubmittedAt as unknown as number;
+      const timeSince = now - lastRequestTime;
 
-       if (timeSince < REACTIVATION_REQUEST_COOLDOWN_SECONDS) {
-           throw new AppError("Your previous request is pending. You can send another request after 2 days.", 400);
-       }
+      if (timeSince < REACTIVATION_REQUEST_COOLDOWN_SECONDS) {
+        throw new AppError("Your previous request is pending. You can send another request after 2 days.", 400);
+      }
     }
 
     // Logic to send email via Gmail App Password (Nodemailer)
@@ -211,7 +213,7 @@ export const submitReactivationRequest = catchAsync(
           },
         });
 
-        const adminEmail = process.env.ADMIN_EMAIL || "talhayaseen.dev@gmail.com"; 
+        const adminEmail = process.env.ADMIN_EMAIL || "talhayaseen.dev@gmail.com";
 
         await transporter.sendMail({
           from: `"Notes App Support" <${serviceEmail}>`,
@@ -227,18 +229,18 @@ export const submitReactivationRequest = catchAsync(
         logger.warn(`Missing SERVICE_EMAIL or SERVICE_EMAIL_PASSWORD env vars. Cannot send email via Nodemailer.`);
       }
     } catch (error) {
-       logger.error(`Failed to send reactivation email: ${error}`);
-       // Don't block the UI flow, just log the error
+      logger.error(`Failed to send reactivation email: ${error}`);
+      // Don't block the UI flow, just log the error
     }
 
     logger.info(`Reactivation request from ${user.email}: ${subject} - ${message}`);
 
     // Mark as submitted
     await UserModel.findByIdAndUpdate(userId, {
-        $set: { 
-            reactivationRequestSubmitted: true,
-            reactivationRequestSubmittedAt: Math.floor(Date.now() / 1000)
-        }
+      $set: {
+        reactivationRequestSubmitted: true,
+        reactivationRequestSubmittedAt: Math.floor(Date.now() / 1000)
+      }
     });
 
     res.status(200).json({
