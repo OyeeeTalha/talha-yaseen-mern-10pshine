@@ -245,15 +245,15 @@ function NoteCard(props: NoteCardProps) {
             <h4 className="text-white font-medium text-sm truncate">{title}</h4>
           </div>
 
-          {/* Snippet - Flexible column */}
+          {/* Snippet - Flexible but constrained column */}
           <div className="flex-1 min-w-0 px-4">
             <p className="text-gray-400 text-sm truncate">
               {displayContent || "No content"}
             </p>
           </div>
 
-          {/* Category - Fixed width column */}
-          <div className="w-32 shrink-0">
+          {/* Category - Fixed width column with truncation */}
+          <div className="w-32 shrink-0 overflow-hidden">
             {categoryName &&
               categoryId !== null &&
               categoryId !== undefined &&
@@ -261,7 +261,7 @@ function NoteCard(props: NoteCardProps) {
               categoryIndex !== null &&
               categoryIndex !== undefined ? (
               <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border max-w-full"
                 style={{
                   backgroundColor: `${getDeterministicColor(categoryIndex)}15`,
                   borderColor: `${getDeterministicColor(categoryIndex)}40`,
@@ -269,7 +269,7 @@ function NoteCard(props: NoteCardProps) {
                 }}
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full"
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{
                     backgroundColor: getDeterministicColor(categoryIndex),
                   }}
@@ -277,8 +277,8 @@ function NoteCard(props: NoteCardProps) {
                 <span className="truncate">{categoryName}</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-700/40 bg-gray-800/30 text-gray-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-700/40 bg-gray-800/30 text-gray-500 max-w-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-600 shrink-0"></span>
                 <span className="truncate">Void</span>
               </span>
             )}
