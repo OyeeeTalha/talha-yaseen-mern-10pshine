@@ -12,6 +12,9 @@ import noteRoutes from "./features/notes/routes.js";
 
 import userRoutes from "./features/user/routes.js";
 
+import contactRoutes from "./features/contact/routes.js";
+import * as timers from "./config/timers.config.js";
+
 const app: Application = express();
 
 app.use(
@@ -53,6 +56,14 @@ app.use("/auth", ExpressAuth(authConfig));
 app.use("/notes", noteRoutes);
 
 app.use("/user", userRoutes);
+
+app.use("/", contactRoutes);
+
+
+
+app.get("/config", (req, res) => {
+  res.status(200).json(timers);
+});
 
 app.get("/", (req, res) => {
   res.status(200).json({

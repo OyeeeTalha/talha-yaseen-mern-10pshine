@@ -266,12 +266,14 @@ export const trashNote = catchAsync(async (req: Request, res: Response) => {
   }
 
   const trashedAt = Math.floor(Date.now() / 1000); // Current time in Unix seconds
+  const expireAt = new Date(Date.now() + TRASH_PERIOD_SECONDS * 1000);
 
   const trashedNote = await NoteModel.findOneAndUpdate(
     { _id: id, userId: userId },
     {
       isTrash: true,
       trashedAt: trashedAt,
+      expireAt: expireAt,
       isPinned: false, // Unpin when trashing
       isFavorite: false, // Remove from favorites when trashing
     },
@@ -302,6 +304,7 @@ export const restoreNote = catchAsync(async (req: Request, res: Response) => {
     {
       isTrash: false,
       trashedAt: null,
+      expireAt: null,
     },
     { new: true },
   );
