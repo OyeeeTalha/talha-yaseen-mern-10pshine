@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { TRASH_PERIOD_SECONDS } from "../config/trash.config";
+import { TRASH_PERIOD_SECONDS } from "../config/timers.config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

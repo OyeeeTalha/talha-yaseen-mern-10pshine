@@ -15,6 +15,11 @@ function ProtectedRoutes() {
 
   // Check if user object exists and has the user property (standard Auth.js session structure)
   if (user && user.user) {
+    // Check for account deactivation
+    if ((user.user as any).isDeactivated) {
+      return <Navigate to="/account-deactivated" replace />;
+    }
+
     return (
       <Routes>
         <Route
