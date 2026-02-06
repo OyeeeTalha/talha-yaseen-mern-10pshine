@@ -12,6 +12,28 @@ import {
 } from "./schema.js";
 import { TRASH_PERIOD_SECONDS } from "../../config/timers.config.js";
 
+// Helper to attach shared note info (shareId, sharedWith, etc.) to notes
+const attachSharedInfo = async (notes: any[]) => {
+  const noteIds = notes.map((n) => n._id);
+  const sharedNotes = await SharedNoteModel.find({ noteId: { $in: noteIds } });
+
+  const sharedNoteMap = new Map(
+    sharedNotes.map((sn) => [sn.noteId.toString(), sn]),
+  );
+
+  return notes.map((note) => {
+    const noteObj = note.toObject ? note.toObject() : note;
+    const sharedNote = sharedNoteMap.get(noteObj._id.toString());
+
+    if (sharedNote) {
+      noteObj.shareId = sharedNote.shareId;
+      noteObj.shareAccessLevel = sharedNote.generalAccessLevel;
+      noteObj.sharedWith = sharedNote.collaborators;
+    }
+    return noteObj;
+  });
+};
+
 // Helper function to convert category IDs to names and indices in notes
 // Also populates sharedWith user details and editors from editHistory
 const populateCategoryNames = async (notes: any[], userId: string) => {
@@ -51,15 +73,20 @@ const populateCategoryNames = async (notes: any[], userId: string) => {
   // Fetch all user details in one query
   const users = await UserModel.find(
     { _id: { $in: Array.from(allUserIds) } },
-    { name: 1, email: 1, avatar: 1, avatarBgColor: 1 }
+    { name: 1, email: 1, avatar: 1, avatarBgColor: 1 },
   );
 
   // Create map of user ID to user details
   const userMap = new Map(
     users.map((u) => [
       u._id.toString(),
-      { name: u.name, email: u.email, avatar: u.avatar, avatarBgColor: u.avatarBgColor },
-    ])
+      {
+        name: u.name,
+        email: u.email,
+        avatar: u.avatar,
+        avatarBgColor: u.avatarBgColor,
+      },
+    ]),
   );
 
   return notes.map((note) => {
@@ -68,23 +95,32 @@ const populateCategoryNames = async (notes: any[], userId: string) => {
     const categoryInfo = categoryId ? categoryMap.get(categoryId) : null;
 
     // Populate sharedWith with user details
-    const populatedSharedWith = (noteObj.sharedWith || []).map((collab: any) => {
-      const userDetails = userMap.get(collab.userId?.toString());
-      return {
-        userId: collab.userId?.toString(),
-        accessLevel: collab.accessLevel,
-        addedAt: collab.addedAt,
-        name: userDetails?.name,
-        email: userDetails?.email,
-        image: userDetails?.avatar, // Map avatar to image for frontend
-        avatarBgColor: userDetails?.avatarBgColor, // Map background color
-      };
-    });
+    const populatedSharedWith = (noteObj.sharedWith || []).map(
+      (collab: any) => {
+        const userDetails = userMap.get(collab.userId?.toString());
+        return {
+          userId: collab.userId?.toString(),
+          accessLevel: collab.accessLevel,
+          addedAt: collab.addedAt,
+          name: userDetails?.name,
+          email: userDetails?.email,
+          image: userDetails?.avatar, // Map avatar to image for frontend
+          avatarBgColor: userDetails?.avatarBgColor, // Map background color
+        };
+      },
+    );
 
     // Extract unique editors from editHistory with user details
     const editorIds = new Set<string>();
-    const editors: Array<{userId: string; name?: string; email?: string; image?: string; avatarBgColor?: string; lastEditedAt?: Date}> = [];
-    
+    const editors: Array<{
+      userId: string;
+      name?: string;
+      email?: string;
+      image?: string;
+      avatarBgColor?: string;
+      lastEditedAt?: Date;
+    }> = [];
+
     // Process editHistory in reverse to get most recent edits first
     const editHistory = noteObj.editHistory || [];
     for (let i = editHistory.length - 1; i >= 0; i--) {
@@ -320,9 +356,15 @@ export const getAllNotes = catchAsync(async (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 10;
   const skip = (page - 1) * limit;
 
-  // Find notes for this user OR shared with this user that are NOT soft-deleted
+  // 1. Find notes explicitly shared with this user via SharedNote collection
+  const sharedDocs = await SharedNoteModel.find({
+    "collaborators.userId": userId,
+  });
+  const sharedNoteIds = sharedDocs.map((doc) => doc.noteId);
+
+  // 2. Find notes for this user OR shared with this user that are NOT soft-deleted
   const query = {
-    $or: [{ userId: userId }, { "sharedWith.userId": userId }],
+    $or: [{ userId: userId }, { _id: { $in: sharedNoteIds } }],
     isDeleted: false,
   };
 
@@ -331,8 +373,14 @@ export const getAllNotes = catchAsync(async (req: Request, res: Response) => {
     .skip(skip)
     .limit(limit);
 
-  // Populate category names
-  const notesWithCategories = await populateCategoryNames(notes, userId);
+  // 3. Attach shared note info (shareId, sharedWith) to the notes
+  const notesWithSharedInfo = await attachSharedInfo(notes);
+
+  // 4. Populate category names and user details
+  const notesWithCategories = await populateCategoryNames(
+    notesWithSharedInfo,
+    userId,
+  );
 
   // Count total documents for pagination metadata
   const totalNotes = await NoteModel.countDocuments(query);
@@ -357,7 +405,7 @@ export const getNoteById = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("You must be logged in to view this note", 401);
   }
 
-  // First change: Find note by ID only (dont filter by owner yet)
+  // Find note by ID only (dont filter by owner yet)
   const note = await NoteModel.findOne({
     _id: id,
     isDeleted: false,
@@ -378,7 +426,7 @@ export const getNoteById = catchAsync(async (req: Request, res: Response) => {
     if (sharedNote) {
       // Check specific collaborator access
       const isCollaborator = sharedNote.collaborators.some(
-        (c) => c.userId.toString() === userId
+        (c) => c.userId.toString() === userId,
       );
       if (isCollaborator) {
         hasAccess = true;
@@ -395,8 +443,14 @@ export const getNoteById = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("You do not have permission to view this note", 403);
   }
 
-  // Populate category name for single note (use note owner's categories)
-  const notesWithCategories = await populateCategoryNames([note], note.userId.toString());
+  // Attach shared info
+  const notesWithSharedInfo = await attachSharedInfo([note]);
+
+  // Populate category name
+  const notesWithCategories = await populateCategoryNames(
+    notesWithSharedInfo,
+    note.userId.toString(),
+  );
 
   res.status(200).json({
     status: "success",
@@ -428,8 +482,14 @@ export const getNotesByCategory = catchAsync(
       isDeleted: false,
     }).sort({ isPinned: -1, updatedAt: -1 });
 
+    // Attach shared info (in case we want to show shared indicators in category view)
+    const notesWithSharedInfo = await attachSharedInfo(notes);
+
     // Populate category names
-    const notesWithCategories = await populateCategoryNames(notes, userId);
+    const notesWithCategories = await populateCategoryNames(
+      notesWithSharedInfo,
+      userId,
+    );
 
     res.status(200).json({
       status: "success",
