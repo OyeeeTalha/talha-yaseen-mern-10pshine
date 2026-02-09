@@ -33,6 +33,7 @@ export const handleContactSubmission = async (req: Request, res: Response) => {
             if (serviceEmail && servicePassword) {
                 const transporter = nodemailer.createTransport({
                     service: "gmail",
+                    secure: true, // Use TLS
                     auth: {
                         user: serviceEmail,
                         pass: servicePassword,
@@ -118,6 +119,7 @@ export const handleWaitlistSubmission = async (req: Request, res: Response) => {
             if (serviceEmail && servicePassword) {
                 const transporter = nodemailer.createTransport({
                     service: "gmail",
+                    secure: true, // Use TLS
                     auth: {
                         user: serviceEmail,
                         pass: servicePassword,
