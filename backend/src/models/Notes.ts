@@ -44,10 +44,32 @@ const notesSchema = new Schema(
       required: false,
       default: null,
     },
+    expireAt: {
+      type: Date,
+      default: null,
+      index: { expires: 0 }, // TTL index: documents expire at the time specified in this field
+    },
     isDeleted: {
       type: Boolean,
       default: false,
     },
+    editHistory: [
+      {
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+        firstEditedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        lastEditedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
   },
   {
     timestamps: true,

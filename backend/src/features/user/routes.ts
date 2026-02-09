@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { getProfile, updateProfile, deactivateAccount } from "./controller.js";
+import {
+  getProfile,
+  updateProfile,
+  deactivateAccount,
+  cancelDeactivation,
+  submitReactivationRequest,
+} from "./controller.js";
 import { protect } from "../../shared/middlewares/auth.js";
 
 const router = Router();
@@ -10,5 +16,7 @@ router.use(protect);
 router.get("/profile", getProfile);
 router.patch("/profile", updateProfile);
 router.delete("/deactivate", deactivateAccount);
+router.post("/reactivate", cancelDeactivation);
+router.post("/reactivation-request", submitReactivationRequest);
 
 export default router;

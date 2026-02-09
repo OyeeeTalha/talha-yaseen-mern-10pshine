@@ -1,20 +1,38 @@
+import { useSearchParams, Link } from "react-router-dom";
 import Footer from "@/components/layouts/Footer";
 import { Button } from "@/components/ui/button";
 import EditNoteRoundedIcon from "@mui/icons-material/EditNoteRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import { handleGoogleSignIn } from "@/services/authService";
+
 function SignInPage() {
+  const [searchParams] = useSearchParams();
+  const callbackUrl = searchParams.get("callback");
+
+  const handleSignIn = () => {
+    const APP_URL = import.meta.env.VITE_APP_URL;
+    // If there's a callback, construct the full URL
+    const redirectUrl = callbackUrl ? `${APP_URL}${callbackUrl}` : undefined;
+    handleGoogleSignIn(redirectUrl);
+  };
+
   return (
     <main className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-center p-4">
       <nav className="absolute top-0 w-full flex items-center justify-between px-8 py-6">
-        <div className="flex items-center gap-1">
-          <div className="flex items-center justify-center text-primary ">
+        <Link to="/" className="flex items-center gap-3 group cursor-pointer select-none">
+          <div className="flex items-center justify-center text-primary group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300 ease-out">
             <EditNoteRoundedIcon sx={{ fontSize: 40 }} />
           </div>
-          <h2 className="text-lg font-bold leading-tight tracking-tight">
-            NotesApp
+          <h2 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-white flex items-baseline" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <span className="inline-block hover:text-primary transition-colors" style={{ animation: "kid-bounce 2.5s ease-in-out infinite", animationDelay: "0.1s" }}>M</span>
+            <span className="inline-block hover:text-primary transition-colors" style={{ animation: "kid-bounce 2.5s ease-in-out infinite", animationDelay: "1.4s" }}>a</span>
+            <span className="inline-block hover:text-primary transition-colors" style={{ animation: "kid-bounce 2.5s ease-in-out infinite", animationDelay: "0.3s" }}>n</span>
+            <span className="inline-block hover:text-primary transition-colors" style={{ animation: "kid-bounce 2.5s ease-in-out infinite", animationDelay: "1.8s" }}>t</span>
+            <span className="inline-block hover:text-primary transition-colors" style={{ animation: "kid-bounce 2.5s ease-in-out infinite", animationDelay: "0.6s" }}>i</span>
+            <span className="inline-block hover:text-primary transition-colors" style={{ animation: "kid-bounce 2.5s ease-in-out infinite", animationDelay: "1.1s" }}>q</span>
+            <span className="text-primary inline-block animate-pulse ml-0.5">.</span>
           </h2>
-        </div>
+        </Link>
       </nav>
 
       <main className="w-full max-w-[420px] flex flex-col">
@@ -26,7 +44,7 @@ function SignInPage() {
               </div>
             </div>
             <h1 className="text-slate-900 dark:text-white text-2xl font-bold tracking-tight mb-2">
-              Log in to NotesApp
+              Log in to Mantiq
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-base font-medium">
               Sync your ideas across all devices.
@@ -36,7 +54,7 @@ function SignInPage() {
           <div className="space-y-4">
             <Button
               className="group relative flex w-full items-center justify-center gap-3 rounded-lg bg-white dark:bg-[#233648] border border-slate-200 dark:border-slate-700 p-3.5 transition-all hover:bg-slate-50 hover:border-slate-300 dark:hover:bg-[#2a4055] dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 dark:focus:ring-offset-[#18222c]"
-              onClick={handleGoogleSignIn}
+              onClick={handleSignIn}
             >
               <svg
                 className="h-5 w-5"

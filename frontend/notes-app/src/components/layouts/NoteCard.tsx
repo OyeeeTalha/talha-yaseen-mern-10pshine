@@ -6,7 +6,26 @@ import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import StarBorderRoundedIcon from "@mui/icons-material/StarBorderRounded";
 import RestoreFromTrashRoundedIcon from "@mui/icons-material/RestoreFromTrashRounded";
 import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
-import { getDeterministicColor, calculateTimeRemaining } from "@/lib/utils";
+import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
+import { getDeterministicColor, calculateTimeRemaining, getAvatarUrl } from "@/lib/utils";
+
+type Collaborator = {
+  userId: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  avatarBgColor?: string;
+  accessLevel?: "readonly" | "edit";
+};
+
+type Editor = {
+  userId: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  avatarBgColor?: string;
+  lastEditedAt?: string | Date;
+};
 
 type NoteCardProps = {
   title: string;
@@ -20,11 +39,15 @@ type NoteCardProps = {
   categoryName?: string;
   categoryIndex?: number | null; // For color generation
   viewMode?: "grid" | "list"; // New prop for view mode
+  sharedWith?: Collaborator[]; // Collaborators for sharing info
+  editors?: Editor[]; // Users who have edited the note
+  isOwner?: boolean; // Whether the current user is the owner
   onPinClick?: () => void;
   onFavoriteClick?: () => void;
   onRestore?: () => void;
   onDelete?: () => void;
   onAutoDelete?: () => void; // For automatic deletion without confirmation
+  onShareClick?: () => void; // Share button callback
   onClick?: () => void;
 };
 
@@ -41,17 +64,100 @@ function NoteCard(props: NoteCardProps) {
     categoryName,
     categoryIndex,
     viewMode = "grid", // Default to grid view
+    editors = [], // Users who have edited the note
+    isOwner = true, // Default to true for backward compatibility
     onPinClick,
     onFavoriteClick,
     onRestore,
     onDelete,
     onAutoDelete,
+    onShareClick,
     onClick,
   } = props;
   const [showMenu, setShowMenu] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Avatar colors for editors
+  const avatarColors = [
+    "#3b82f6", // blue
+    "#8b5cf6", // purple
+    "#ec4899", // pink
+    "#f59e0b", // amber
+    "#10b981", // emerald
+    "#6366f1", // indigo
+  ];
+
+  // Get initials from name or email
+  const getInitials = (name?: string, email?: string): string => {
+    if (name) {
+      const parts = name.split(" ");
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return "??";
+  };
+
+  // Get color for editor based on index
+  const getAvatarColor = (index: number): string => {
+    return avatarColors[index % avatarColors.length];
+  };
+
+  // Check if image is a valid URL (not a preset avatar name)
+  const isValidImageUrl = (image?: string): boolean => {
+    if (!image) return false;
+    return (
+      image.startsWith("http://") ||
+      image.startsWith("https://") ||
+      image.startsWith("data:") ||
+      image.startsWith("/")
+    );
+  };
+
+  // Editor avatars component - shows users who have edited the note
+  const EditorAvatars = () => {
+    if (editors.length === 0) return null;
+    
+    const displayedEditors = editors.slice(0, 3);
+    const remaining = editors.length - 3;
+
+    return (
+      <div className="flex items-center -space-x-2">
+        {displayedEditors.map((editor, index) => (
+          <div
+            key={editor.userId}
+            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-gray-800"
+            style={{ backgroundColor: editor.avatarBgColor || getAvatarColor(index) }}
+            title={editor.name || editor.email || "Editor"}
+          >
+            {isValidImageUrl(getAvatarUrl(editor.image || "")) ? (
+              <img
+                src={getAvatarUrl(editor.image || "")}
+                alt={editor.name || ""}
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              getInitials(editor.name, editor.email)
+            )}
+          </div>
+        ))}
+        {remaining > 0 && (
+          <div
+            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-gray-300 bg-gray-700 border-2 border-gray-800"
+            title={`+${remaining} more editors`}
+          >
+            +{remaining}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Update timer for trashed notes
   useEffect(() => {
@@ -176,6 +282,11 @@ function NoteCard(props: NoteCardProps) {
             )}
           </div>
 
+          {/* Editors - Fixed width column */}
+          <div className="w-24 shrink-0">
+            <EditorAvatars />
+          </div>
+
           {/* Last Edited - Fixed width column */}
           <div className="w-24 shrink-0 text-right">
             <span className="text-xs text-gray-500">{date}</span>
@@ -230,7 +341,21 @@ function NoteCard(props: NoteCardProps) {
                 </button>
               </>
             ) : (
-              <>
+                          <>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShareClick?.();
+                      setShowMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+                  >
+                    <ShareRoundedIcon sx={{ fontSize: 18 }} />
+                    <span>Share</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -364,7 +489,10 @@ function NoteCard(props: NoteCardProps) {
               </>
             )}
           </div>
-          <span className="text-xs text-gray-500 shrink-0">{date}</span>
+          <div className="flex items-center gap-3">
+            <EditorAvatars />
+            <span className="text-xs text-gray-500 shrink-0">{date}</span>
+          </div>
         </div>
       </div>
 
@@ -404,6 +532,20 @@ function NoteCard(props: NoteCardProps) {
             </>
           ) : (
             <>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShareClick?.();
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+                >
+                  <ShareRoundedIcon sx={{ fontSize: 18 }} />
+                  <span>Share</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={(e) => {

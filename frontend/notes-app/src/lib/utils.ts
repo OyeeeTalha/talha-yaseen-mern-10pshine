@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { TRASH_PERIOD_SECONDS } from "../config/trash.config";
+import { TRASH_PERIOD_SECONDS } from "../config/timers.config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -127,4 +127,88 @@ export const calculateTimeRemaining = (
     secondsLeft,
     formattedTime,
   };
+};
+
+export function debounce<T extends (...args: unknown[]) => void>(
+  func: T,
+  delay: number,
+): ((...args: Parameters<T>) => void) & {
+  flush: () => void;
+  cancel: () => void;
+} {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let lastArgs: Parameters<T> | null = null;
+
+  const debouncedFunc = (...args: Parameters<T>) => {
+    lastArgs = args;
+
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    timeoutId = setTimeout(() => {
+      func(...args);
+      timeoutId = null;
+      lastArgs = null;
+    }, delay);
+  };
+
+  // Immediately execute pending function
+  debouncedFunc.flush = () => {
+    if (timeoutId && lastArgs) {
+      clearTimeout(timeoutId);
+      func(...lastArgs);
+      timeoutId = null;
+      lastArgs = null;
+    }
+  };
+
+  // Cancel pending execution
+  debouncedFunc.cancel = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+      lastArgs = null;
+    }
+  };
+
+  return debouncedFunc;
+}
+
+export const getAvatarUrl = (avatar: string): string => {
+  const avatarMap: Record<string, string> = {
+    "default-avatar-1": "/icons/avatars/man.png",
+    "default-avatar-2": "/icons/avatars/woman.png",
+    "default-avatar-3": "/icons/avatars/arab-woman.png",
+    "default-avatar-4": "/icons/avatars/doctor.png",
+    "default-avatar-5": "/icons/avatars/woman (1).png",
+    "default-avatar-6": "/icons/avatars/woman (2).png",
+    "default-avatar-7": "/icons/avatars/boy.png",
+    "default-avatar-8": "/icons/avatars/boy (1).png",
+  };
+  return avatarMap[avatar] || avatar;
+};
+
+export const getInitials = (name?: string, email?: string): string => {
+  if (name) {
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+  if (email) {
+    return email.substring(0, 2).toUpperCase();
+  }
+  return "??";
+};
+
+export const isValidImageUrl = (image?: string): boolean => {
+  if (!image) return false;
+  return (
+    image.startsWith("http://") ||
+    image.startsWith("https://") ||
+    image.startsWith("data:") ||
+    image.startsWith("/")
+  );
 };
