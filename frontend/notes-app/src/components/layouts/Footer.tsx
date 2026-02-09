@@ -12,7 +12,8 @@ function ComplexFooter() {
 
   const handleJoinWaitlist = async () => {
     // Basic Email Format Validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Use anchored pattern to prevent catastrophic backtracking
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     if (!emailRegex.test(email)) {
       showError("Please enter a valid email address.");
       return;

@@ -49,7 +49,8 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        // Use atomic groups equivalent - anchored pattern to prevent backtracking
+        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
         if (!emailRegex.test(email)) {
             showError("Please enter a valid email address.");
             return;
