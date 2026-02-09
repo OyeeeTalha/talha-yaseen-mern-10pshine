@@ -5,6 +5,7 @@ import { UserAuth } from "@/hooks/userAuth";
 
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Editor = lazy(() => import("../pages/Editor"));
+const ProfilePage = lazy(() => import("../pages/Profile-Page"));
 
 function ProtectedRoutes() {
   const { user, isLoading } = UserAuth();
@@ -12,9 +13,13 @@ function ProtectedRoutes() {
     return <LoadingSpinner />;
   }
 
-  console.log("ProtectedRoutes - user:", user);
   // Check if user object exists and has the user property (standard Auth.js session structure)
   if (user && user.user) {
+    // Check for account deactivation
+    if ((user.user as any).isDeactivated) {
+      return <Navigate to="/account-deactivated" replace />;
+    }
+
     return (
       <Routes>
         <Route
@@ -30,6 +35,14 @@ function ProtectedRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner />}>
               <Editor />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <ProfilePage />
             </Suspense>
           }
         />

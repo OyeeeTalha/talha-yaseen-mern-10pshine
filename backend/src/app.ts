@@ -10,13 +10,18 @@ import { ExpressAuth } from "@auth/express";
 import { authConfig } from "./features/auth/config.js";
 import noteRoutes from "./features/notes/routes.js";
 
+import userRoutes from "./features/user/routes.js";
+
+import contactRoutes from "./features/contact/routes.js";
+import * as timers from "./config/timers.config.js";
+
 const app: Application = express();
 
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -35,7 +40,7 @@ app.use(
       }),
     },
     wrapSerializers: true,
-  })
+  }),
 );
 
 app.use(express.json());
@@ -49,6 +54,16 @@ app.use("/auth", ExpressAuth(authConfig));
 
 //Express Routes
 app.use("/notes", noteRoutes);
+
+app.use("/user", userRoutes);
+
+app.use("/", contactRoutes);
+
+
+
+app.get("/config", (req, res) => {
+  res.status(200).json(timers);
+});
 
 app.get("/", (req, res) => {
   res.status(200).json({

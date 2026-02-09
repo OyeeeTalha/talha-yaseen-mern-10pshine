@@ -1,24 +1,19 @@
-import { Schema, model, InferSchemaType } from "mongoose";
+import { Schema, model, InferSchemaType, Types } from "mongoose";
 
 const categorySchema = new Schema(
   {
     id: {
-      type: Number,
+      type: Schema.Types.ObjectId,
+      default: () => new Types.ObjectId(),
       required: true,
-      unique: true,
     },
     name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
-    isDeleted: {
-      type: Boolean,
-      default: false,
-    },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const userSchema = new Schema(
@@ -41,18 +36,81 @@ const userSchema = new Schema(
       required: true,
       trim: true,
     },
+    displayName: {
+      type: String,
+      trim: true,
+    },
+    firstName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    avatar: {
+      type: String,
+      default: "default-avatar-1",
+    },
+    avatarBgColor: {
+      type: String,
+      default: "#60a5fa",
+    },
     catagories: {
       type: [categorySchema],
-      default: [],
+      default: function () {
+        return [
+          {
+            id: new Types.ObjectId(),
+            name: "Void",
+          },
+        ];
+      },
     },
     isDeleted: {
       type: Boolean,
       default: false,
     },
+    // OAuth tokens
+    accessToken: {
+      type: String,
+    },
+    refreshToken: {
+      type: String,
+    },
+    tokenExpiresAt: {
+      type: Date,
+    },
+    // Account Deactivation
+    isDeactivated: {
+      type: Boolean,
+      default: false,
+    },
+    deactivatedAt: {
+      type: Number, // Unix timestamp in seconds
+      default: null,
+    },
+    deactivationExpireAt: {
+      type: Date,
+      default: null,
+    },
+    reactivationRequestSubmitted: {
+      type: Boolean,
+      default: false,
+    },
+    reactivationRequestSubmittedAt: {
+      type: Number, // Unix timestamp in seconds
+      default: null,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export type User = InferSchemaType<typeof userSchema>;
