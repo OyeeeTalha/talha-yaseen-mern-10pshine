@@ -331,6 +331,7 @@ function Dashboard() {
                       isFavorite={note.isFavorite || false}
                       isTrash={note.isTrash || false}
                       trashedAt={note.trashedAt}
+                      expireAt={note.expireAt}
                       categoryId={note.category}
                       categoryName={note.categoryName}
                       categoryIndex={note.categoryIndex}
@@ -370,22 +371,20 @@ function Dashboard() {
                   <div className="h-8  flex items-center gap-1 bg-gray-800/50 rounded  border border-white/5">
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`h-8 w-8  rounded transition-all ${
-                        viewMode === "grid"
-                          ? "bg-primary text-white shadow-md shadow-primary/20"
-                          : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }`}
+                      className={`h-8 w-8  rounded transition-all ${viewMode === "grid"
+                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                        }`}
                       title="Grid View"
                     >
                       <GridViewRoundedIcon sx={{ fontSize: 16 }} />
                     </button>
                     <button
                       onClick={() => setViewMode("list")}
-                      className={`h-8 w-8  rounded transition-all ${
-                        viewMode === "list"
-                          ? "bg-primary text-white shadow-md shadow-primary/20"
-                          : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }`}
+                      className={`h-8 w-8  rounded transition-all ${viewMode === "list"
+                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                        }`}
                       title="List View"
                     >
                       <ViewListRoundedIcon sx={{ fontSize: 16 }} />
@@ -445,7 +444,7 @@ function Dashboard() {
                           Editors
                         </span>
                       </div>
-                      <div className="w-24 shrink-0 text-right">
+                      <div className="w-24 shrink-0">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                           Last Edited
                         </span>
@@ -471,6 +470,7 @@ function Dashboard() {
                         isFavorite={note.isFavorite || false}
                         isTrash={note.isTrash || false}
                         trashedAt={note.trashedAt}
+                        expireAt={note.expireAt}
                         categoryId={note.category}
                         categoryName={note.categoryName}
                         categoryIndex={note.categoryIndex}
