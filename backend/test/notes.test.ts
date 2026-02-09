@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, expect, vi, afterEach } from "vitest";
 import request from "supertest";
 import { UserModel } from "../src/models/User.js";
+import { Types } from "mongoose";
 
 // Mock the @auth/express module
 vi.mock("@auth/express", () => ({
@@ -21,7 +22,12 @@ describe("Notes API Endpoints", () => {
       googleId: `google_${Date.now()}`,
       email: `test_${Date.now()}@example.com`,
       name: "Test User",
-      catagories: [],
+      catagories: [
+        {
+          id: new Types.ObjectId(),
+          name: "Void",
+        },
+      ],
       isDeleted: false,
     });
     return user;
@@ -55,7 +61,6 @@ describe("Notes API Endpoints", () => {
       const noteData = {
         title: "Test Note",
         content: "This is test content",
-        category: "Work",
         tags: ["test", "work"],
         isPinned: false,
       };
@@ -174,6 +179,105 @@ describe("Notes API Endpoints", () => {
     });
   });
 
+  describe("PATCH /notes/trash-note/:id", () => {
+    let noteId: string;
+
+    beforeEach(async () => {
+      const response = await request(app).post("/notes/create-note").send({
+        title: "Note to Trash",
+        content: "This will be trashed",
+        isPinned: true,
+        isFavorite: true,
+      });
+
+      noteId = response.body.data.note._id;
+    });
+
+    it("should trash a note successfully", async () => {
+      const response = await request(app)
+        .patch(`/notes/trash-note/${noteId}`)
+        .expect(200);
+
+      expect(response.body.status).toBe("success");
+      expect(response.body.message).toContain("trash");
+      expect(response.body.data.note.isTrash).toBe(true);
+      expect(response.body.data.note.isPinned).toBe(false);
+      expect(response.body.data.note.isFavorite).toBe(false);
+    });
+
+    it("should return 404 for non-existent note", async () => {
+      const fakeId = "507f1f77bcf86cd799439011";
+
+      await request(app).patch(`/notes/trash-note/${fakeId}`).expect(404);
+    });
+
+    it("should fail without authentication", async () => {
+      vi.mocked(getSession).mockResolvedValue(null as any);
+
+      await request(app).patch(`/notes/trash-note/${noteId}`).expect(401);
+    });
+  });
+
+  describe("PATCH /notes/restore-note/:id", () => {
+    let noteId: string;
+
+    beforeEach(async () => {
+      const createResponse = await request(app).post("/notes/create-note").send({
+        title: "Note to Restore",
+      });
+
+      noteId = createResponse.body.data.note._id;
+
+      // Trash the note first
+      await request(app).patch(`/notes/trash-note/${noteId}`);
+    });
+
+    it("should restore a trashed note successfully", async () => {
+      const response = await request(app)
+        .patch(`/notes/restore-note/${noteId}`)
+        .expect(200);
+
+      expect(response.body.status).toBe("success");
+      expect(response.body.message).toContain("restored");
+      expect(response.body.data.note.isTrash).toBe(false);
+      expect(response.body.data.note.trashedAt).toBeNull();
+    });
+
+    it("should return 404 for non-existent note", async () => {
+      const fakeId = "507f1f77bcf86cd799439011";
+
+      await request(app).patch(`/notes/restore-note/${fakeId}`).expect(404);
+    });
+  });
+
+  describe("DELETE /notes/permanent-delete/:id", () => {
+    let noteId: string;
+
+    beforeEach(async () => {
+      const createResponse = await request(app).post("/notes/create-note").send({
+        title: "Note to Permanently Delete",
+      });
+
+      noteId = createResponse.body.data.note._id;
+    });
+
+    it("should permanently delete a note successfully", async () => {
+      const response = await request(app)
+        .delete(`/notes/permanent-delete/${noteId}`)
+        .expect(200);
+
+      expect(response.body.status).toBe("success");
+      expect(response.body.message).toContain("permanently deleted");
+      expect(response.body.data.note.isDeleted).toBe(true);
+    });
+
+    it("should return 404 for non-existent note", async () => {
+      const fakeId = "507f1f77bcf86cd799439011";
+
+      await request(app).delete(`/notes/permanent-delete/${fakeId}`).expect(404);
+    });
+  });
+
   describe("GET /notes/get-notes", () => {
     beforeEach(async () => {
       // Create multiple test notes
@@ -264,43 +368,60 @@ describe("Notes API Endpoints", () => {
   });
 
   describe("GET /notes/get-notes-by-category/:category", () => {
+    let categoryId: string;
+
     beforeEach(async () => {
-      await request(app)
+      // Create a category first
+      const catResponse = await request(app)
+        .post("/notes/create-category")
+        .send({ name: "Work" });
+
+      categoryId = catResponse.body.data.category.id;
+
+      // Create notes and assign category
+      const note1 = await request(app)
         .post("/notes/create-note")
-        .send({ title: "Work Note 1", category: "Work", isPinned: true });
+        .send({ title: "Work Note 1", isPinned: true });
+
+      const note2 = await request(app)
+        .post("/notes/create-note")
+        .send({ title: "Work Note 2" });
 
       await request(app)
-        .post("/notes/create-note")
-        .send({ title: "Work Note 2", category: "Work" });
+        .patch(`/notes/assign-note-category/${note1.body.data.note._id}`)
+        .send({ category: categoryId });
 
       await request(app)
+        .patch(`/notes/assign-note-category/${note2.body.data.note._id}`)
+        .send({ category: categoryId });
+
+      // Create a note without category
+      await request(app)
         .post("/notes/create-note")
-        .send({ title: "Personal Note", category: "Personal" });
+        .send({ title: "Uncategorized Note" });
     });
 
     it("should retrieve notes by category", async () => {
       const response = await request(app)
-        .get("/notes/get-notes-by-category/Work")
+        .get(`/notes/get-notes-by-category/${categoryId}`)
         .expect(200);
 
       expect(response.body.status).toBe("success");
       expect(response.body.data.notes).toHaveLength(2);
-      expect(
-        response.body.data.notes.every((n: any) => n.category === "Work")
-      ).toBe(true);
     });
 
     it("should sort notes with pinned first", async () => {
       const response = await request(app)
-        .get("/notes/get-notes-by-category/Work")
+        .get(`/notes/get-notes-by-category/${categoryId}`)
         .expect(200);
 
       expect(response.body.data.notes[0].isPinned).toBe(true);
     });
 
     it("should return empty array for non-existent category", async () => {
+      const fakeId = "507f1f77bcf86cd799439011";
       const response = await request(app)
-        .get("/notes/get-notes-by-category/NonExistent")
+        .get(`/notes/get-notes-by-category/${fakeId}`)
         .expect(200);
 
       expect(response.body.data.notes).toHaveLength(0);
@@ -357,6 +478,59 @@ describe("Notes API Endpoints", () => {
     });
   });
 
+  describe("PATCH /notes/favorite-note/:id", () => {
+    let noteId: string;
+
+    beforeEach(async () => {
+      const response = await request(app)
+        .post("/notes/create-note")
+        .send({ title: "Note to Favorite", isFavorite: false });
+
+      noteId = response.body.data.note._id;
+    });
+
+    it("should favorite a note successfully", async () => {
+      const response = await request(app)
+        .patch(`/notes/favorite-note/${noteId}`)
+        .expect(200);
+
+      expect(response.body.status).toBe("success");
+      expect(response.body.message).toContain("favorites");
+      expect(response.body.data.note.isFavorite).toBe(true);
+    });
+
+    it("should return 404 for non-existent note", async () => {
+      const fakeId = "507f1f77bcf86cd799439011";
+
+      await request(app).patch(`/notes/favorite-note/${fakeId}`).expect(404);
+    });
+  });
+
+  describe("PATCH /notes/unfavorite-note/:id", () => {
+    let noteId: string;
+
+    beforeEach(async () => {
+      const response = await request(app)
+        .post("/notes/create-note")
+        .send({ title: "Favorited Note" });
+
+      noteId = response.body.data.note._id;
+
+      // Favorite the note first
+      await request(app).patch(`/notes/favorite-note/${noteId}`);
+    });
+
+    it("should unfavorite a note successfully", async () => {
+      const response = await request(app)
+        .patch(`/notes/unfavorite-note/${noteId}`)
+        .expect(200);
+
+      expect(response.body.status).toBe("success");
+      expect(response.body.message).toContain("removed from favorites");
+      expect(response.body.data.note.isFavorite).toBe(false);
+    });
+  });
+
   describe("Category Management", () => {
     describe("POST /notes/create-category", () => {
       it("should create a category successfully", async () => {
@@ -367,10 +541,31 @@ describe("Notes API Endpoints", () => {
 
         expect(response.body.status).toBe("success");
         expect(response.body.data.category.name).toBe("New Category");
+        expect(response.body.data.category.id).toBeDefined();
       });
 
       it("should fail without category name", async () => {
         await request(app).post("/notes/create-category").send({}).expect(400);
+      });
+
+      it("should capitalize category names", async () => {
+        const response = await request(app)
+          .post("/notes/create-category")
+          .send({ name: "work projects" })
+          .expect(201);
+
+        expect(response.body.data.category.name).toBe("Work Projects");
+      });
+
+      it("should prevent duplicate category names", async () => {
+        await request(app)
+          .post("/notes/create-category")
+          .send({ name: "Work" });
+
+        await request(app)
+          .post("/notes/create-category")
+          .send({ name: "work" })
+          .expect(400);
       });
     });
 
@@ -391,22 +586,22 @@ describe("Notes API Endpoints", () => {
           .expect(200);
 
         expect(response.body.status).toBe("success");
-        expect(response.body.data.categories.length).toBeGreaterThanOrEqual(2);
+        // 3 because Void is default + 2 created
+        expect(response.body.data.categories.length).toBeGreaterThanOrEqual(3);
       });
 
-      it("should sort categories alphabetically", async () => {
+      it("should include category index", async () => {
         const response = await request(app)
           .get("/notes/get-categories")
           .expect(200);
 
         const categories = response.body.data.categories;
-        expect(categories[0].name).toBe("Personal");
-        expect(categories[1].name).toBe("Work");
+        expect(categories[0]).toHaveProperty("index");
       });
     });
 
     describe("DELETE /notes/delete-category/:id", () => {
-      let categoryId: number;
+      let categoryId: string;
 
       beforeEach(async () => {
         const response = await request(app)
@@ -416,7 +611,7 @@ describe("Notes API Endpoints", () => {
         categoryId = response.body.data.category.id;
       });
 
-      it("should soft delete a category", async () => {
+      it("should delete a category", async () => {
         const response = await request(app)
           .delete(`/notes/delete-category/${categoryId}`)
           .expect(200);
@@ -426,20 +621,37 @@ describe("Notes API Endpoints", () => {
       });
 
       it("should return 404 for non-existent category", async () => {
-        await request(app).delete("/notes/delete-category/999999").expect(404);
+        const fakeId = "507f1f77bcf86cd799439011";
+        await request(app).delete(`/notes/delete-category/${fakeId}`).expect(404);
+      });
+
+      it("should return 400 for invalid ObjectId", async () => {
+        await request(app).delete("/notes/delete-category/invalid-id").expect(400);
+      });
+
+      it("should prevent deleting Void category", async () => {
+        // Get user's categories to find Void
+        const catResponse = await request(app).get("/notes/get-categories");
+        const voidCategory = catResponse.body.data.categories.find(
+          (c: any) => c.name === "Void"
+        );
+
+        await request(app)
+          .delete(`/notes/delete-category/${voidCategory.id}`)
+          .expect(400);
       });
     });
 
     describe("PATCH /notes/assign-note-category/:noteId", () => {
       let noteId: string;
-      let categoryName: string;
+      let categoryId: string;
 
       beforeEach(async () => {
         const catResponse = await request(app)
           .post("/notes/create-category")
           .send({ name: "Work" });
 
-        categoryName = catResponse.body.data.category.name;
+        categoryId = catResponse.body.data.category.id;
 
         const noteResponse = await request(app)
           .post("/notes/create-note")
@@ -451,17 +663,17 @@ describe("Notes API Endpoints", () => {
       it("should assign category to note", async () => {
         const response = await request(app)
           .patch(`/notes/assign-note-category/${noteId}`)
-          .send({ category: categoryName })
+          .send({ category: categoryId })
           .expect(200);
 
         expect(response.body.status).toBe("success");
-        expect(response.body.data.note.category).toBe(categoryName);
+        expect(response.body.data.note.category).toBe(categoryId);
       });
 
       it("should remove category by setting to null", async () => {
         await request(app)
           .patch(`/notes/assign-note-category/${noteId}`)
-          .send({ category: categoryName });
+          .send({ category: categoryId });
 
         const response = await request(app)
           .patch(`/notes/assign-note-category/${noteId}`)
@@ -472,10 +684,18 @@ describe("Notes API Endpoints", () => {
       });
 
       it("should fail for non-existent category", async () => {
+        const fakeId = "507f1f77bcf86cd799439011";
         await request(app)
           .patch(`/notes/assign-note-category/${noteId}`)
-          .send({ category: "NonExistentCategory" })
+          .send({ category: fakeId })
           .expect(404);
+      });
+
+      it("should fail for invalid ObjectId", async () => {
+        await request(app)
+          .patch(`/notes/assign-note-category/${noteId}`)
+          .send({ category: "invalid-id" })
+          .expect(400);
       });
     });
   });
