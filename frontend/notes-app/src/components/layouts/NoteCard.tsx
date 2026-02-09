@@ -290,7 +290,7 @@ function NoteCard(props: NoteCardProps) {
           </div>
 
           {/* Last Edited - Fixed width column */}
-          <div className="w-24 shrink-0 text-right">
+          <div className="w-24 shrink-0">
             <span className="text-xs text-gray-500">{date}</span>
           </div>
 

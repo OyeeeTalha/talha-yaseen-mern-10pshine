@@ -372,8 +372,8 @@ function Dashboard() {
                     <button
                       onClick={() => setViewMode("grid")}
                       className={`h-8 w-8  rounded transition-all ${viewMode === "grid"
-                          ? "bg-primary text-white shadow-md shadow-primary/20"
-                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
                         }`}
                       title="Grid View"
                     >
@@ -382,8 +382,8 @@ function Dashboard() {
                     <button
                       onClick={() => setViewMode("list")}
                       className={`h-8 w-8  rounded transition-all ${viewMode === "list"
-                          ? "bg-primary text-white shadow-md shadow-primary/20"
-                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
                         }`}
                       title="List View"
                     >
@@ -444,7 +444,7 @@ function Dashboard() {
                           Editors
                         </span>
                       </div>
-                      <div className="w-24 shrink-0 text-right">
+                      <div className="w-24 shrink-0">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                           Last Edited
                         </span>
