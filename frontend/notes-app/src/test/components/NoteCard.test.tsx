@@ -52,7 +52,7 @@ describe("NoteCard Component", () => {
 
   it("renders without crashing when pinned", () => {
     const { container } = render(
-      <NoteCard {...mockNote} isPinned={true} onPinClick={() => {}} />,
+      <NoteCard {...mockNote} isPinned={true} onPinClick={() => { }} />,
       { wrapper: createWrapper() },
     );
 
@@ -63,7 +63,7 @@ describe("NoteCard Component", () => {
 
   it("renders without crashing when favorited", () => {
     const { container } = render(
-      <NoteCard {...mockNote} isFavorite={true} onFavoriteClick={() => {}} />,
+      <NoteCard {...mockNote} isFavorite={true} onFavoriteClick={() => { }} />,
       { wrapper: createWrapper() },
     );
 
@@ -106,8 +106,18 @@ describe("NoteCard Component", () => {
 
   it("shows trash indicator and timer when note is trashed", () => {
     const trashedAt = Math.floor(Date.now() / 1000);
+    // Set expiration to 30 days from now
+    const expireAt = new Date(
+      Date.now() + 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
     const { container } = render(
-      <NoteCard {...mockNote} isTrash={true} trashedAt={trashedAt} />,
+      <NoteCard
+        {...mockNote}
+        isTrash={true}
+        trashedAt={trashedAt}
+        expireAt={expireAt}
+      />,
       { wrapper: createWrapper() },
     );
 

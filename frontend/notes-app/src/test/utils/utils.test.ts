@@ -74,22 +74,21 @@ describe("Utils Functions", () => {
 
   describe("calculateTimeRemaining", () => {
     it("calculates days remaining correctly", () => {
-      // trashedAt is the time when note was trashed (in seconds)
-      // Function adds 30 days to it and calculates remaining time
+      // Simulate expiration in 23 days
       const now = Math.floor(Date.now() / 1000);
-      const sevenDaysAgo = now - 7 * 24 * 60 * 60;
-      const result = calculateTimeRemaining(sevenDaysAgo);
+      const expireIn23Days = now + 23 * 24 * 60 * 60;
+      const result = calculateTimeRemaining(expireIn23Days);
 
       expect(result.formattedTime).toMatch(/\d+d \d+h/);
       expect(result.isExpired).toBe(false);
-      expect(result.daysLeft).toBeGreaterThan(20); // Should have ~23 days left
+      expect(result.daysLeft).toBe(23);
     });
 
     it("calculates hours remaining when days are 0", () => {
-      // Set trashedAt to 30 days ago minus 3 hours (so 3 hours remaining)
+      // Simulate expiration in 3 hours
       const now = Math.floor(Date.now() / 1000);
-      const thirtyDaysAgoMinus3Hours = now - 30 * 24 * 60 * 60 + 3 * 60 * 60;
-      const result = calculateTimeRemaining(thirtyDaysAgoMinus3Hours);
+      const expireIn3Hours = now + 3 * 60 * 60;
+      const result = calculateTimeRemaining(expireIn3Hours);
 
       // Should show hours and minutes format (no days)
       expect(result.formattedTime).toMatch(/\d+h \d+m/);
@@ -97,30 +96,31 @@ describe("Utils Functions", () => {
     });
 
     it("detects expired time correctly", () => {
-      // Set trashedAt to more than 30 days ago
+      // Set expireAt to a past date
       const now = Math.floor(Date.now() / 1000);
-      const overThirtyDaysAgo = now - 31 * 24 * 60 * 60;
-      const result = calculateTimeRemaining(overThirtyDaysAgo);
+      const expiredYesterday = now - 24 * 60 * 60;
+      const result = calculateTimeRemaining(expiredYesterday);
 
       expect(result.isExpired).toBe(true);
       expect(result.formattedTime).toBe("Expired");
     });
 
     it("handles edge case of 30 days", () => {
-      // Trashed just now, should have full 30 days remaining
+      // Expire in exactly 30 days
       const now = Math.floor(Date.now() / 1000);
-      const result = calculateTimeRemaining(now);
+      const expireIn30Days = now + 30 * 24 * 60 * 60;
+      const result = calculateTimeRemaining(expireIn30Days);
 
       expect(result.formattedTime).toMatch(/\d+d \d+h/);
       expect(result.isExpired).toBe(false);
-      expect(result.daysLeft).toBeGreaterThanOrEqual(29);
+      expect(result.daysLeft).toBe(30);
     });
 
     it("formats minutes and seconds correctly", () => {
-      // Set trashedAt to 30 days ago minus 2 minutes (so 2 minutes remaining)
+      // Expire in 2 minutes 30 seconds
       const now = Math.floor(Date.now() / 1000);
-      const thirtyDaysAgoMinus2Min = now - 30 * 24 * 60 * 60 + (2 * 60 + 30);
-      const result = calculateTimeRemaining(thirtyDaysAgoMinus2Min);
+      const expireIn2Min30s = now + 2 * 60 + 30;
+      const result = calculateTimeRemaining(expireIn2Min30s);
 
       // Should show minutes and seconds format
       expect(result.formattedTime).toMatch(/\d+m \d+s/);
