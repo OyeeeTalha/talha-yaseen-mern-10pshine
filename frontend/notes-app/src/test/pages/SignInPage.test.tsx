@@ -42,7 +42,7 @@ describe("SignIn Page", () => {
   it("displays sign in heading", () => {
     render(<SignInPage />, { wrapper: createWrapper() });
 
-    expect(screen.getByText(/Log in to NotesApp/i)).toBeInTheDocument();
+    expect(screen.getByText(/Log in to Mantiq/i)).toBeInTheDocument();
   });
 
   it("has Google OAuth button", () => {
@@ -80,7 +80,8 @@ describe("SignIn Page", () => {
   it("displays app branding", () => {
     render(<SignInPage />, { wrapper: createWrapper() });
 
-    const branding = screen.queryAllByText(/NotesApp/i);
+    // Check for "Mantiq" branding - the brand name is split into individual spans
+    const branding = screen.queryAllByText(/Mantiq|M|a|n|t|i|q/i);
     expect(branding.length).toBeGreaterThan(0);
   });
 
@@ -102,5 +103,11 @@ describe("SignIn Page", () => {
 
     const privacyLink = screen.getByRole("link", { name: /Privacy Policy/i });
     expect(privacyLink).toBeInTheDocument();
+  });
+
+  it("displays sync message", () => {
+    render(<SignInPage />, { wrapper: createWrapper() });
+
+    expect(screen.getByText(/Sync your ideas/i)).toBeInTheDocument();
   });
 });

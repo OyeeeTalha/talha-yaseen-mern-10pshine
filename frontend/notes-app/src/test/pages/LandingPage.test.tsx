@@ -20,14 +20,13 @@ describe("Landing Page", () => {
 
     expect(
       screen.getByText(/Capture ideas/i) ||
-        screen.getByRole("heading", { level: 1 }),
+      screen.getByRole("heading", { level: 1 }),
     ).toBeInTheDocument();
   });
 
   it("has navbar", () => {
     render(<LandingPage />, { wrapper: createWrapper() });
 
-    // Navbar should be present
     const navbar =
       document.querySelector("nav") || screen.queryByRole("navigation");
     expect(navbar).toBeTruthy();
@@ -36,38 +35,36 @@ describe("Landing Page", () => {
   it("has footer", () => {
     render(<LandingPage />, { wrapper: createWrapper() });
 
-    // Footer should be present
     const footer =
       document.querySelector("footer") || screen.queryByRole("contentinfo");
     expect(footer).toBeTruthy();
   });
 
-  it("displays call-to-action button", () => {
+  it("displays call-to-action links", () => {
     render(<LandingPage />, { wrapper: createWrapper() });
 
-    const ctaButtons = screen.getAllByRole("button", {
-      name: /get started|start/i,
+    // The CTA buttons are Links wrapped in Buttons, so they have role="link"
+    const getStartedLinks = screen.getAllByRole("link", {
+      name: /get started/i,
     });
-    expect(ctaButtons.length).toBeGreaterThan(0);
-    expect(ctaButtons[0]).toBeInTheDocument();
+    expect(getStartedLinks.length).toBeGreaterThan(0);
+    expect(getStartedLinks[0]).toBeInTheDocument();
   });
 
   it("shows features section", () => {
     render(<LandingPage />, { wrapper: createWrapper() });
 
-    // Should display feature highlights - use queryAllByText for multiple matches
-    const featureElements = screen.queryAllByText(
-      /organize|collaborate|real-time/i,
-    );
-    expect(featureElements.length).toBeGreaterThan(0);
+    // Should display feature highlights
+    expect(screen.getByText(/Distraction-free/i)).toBeInTheDocument();
+    expect(screen.getByText(/Limitless Canvas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Instant Search/i)).toBeInTheDocument();
   });
 
   it("displays trusted by section", () => {
     render(<LandingPage />, { wrapper: createWrapper() });
 
-    expect(
-      screen.getByText(/trusted by/i) || screen.getByText(/10Pearls|Google/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/TRUSTED BY/i)).toBeInTheDocument();
+    expect(screen.getByText(/10Pearls/i)).toBeInTheDocument();
   });
 
   it("has responsive layout", () => {
@@ -83,9 +80,9 @@ describe("Landing Page", () => {
   it("displays version badge", () => {
     render(<LandingPage />, { wrapper: createWrapper() });
 
-    expect(
-      screen.getByText(/v2.0|shipped/i) || screen.queryByText(/version/i),
-    ).toBeTruthy();
+    // Use queryAllByText to handle multiple matches
+    const versionElements = screen.queryAllByText(/v2.0|shipped/i);
+    expect(versionElements.length).toBeGreaterThan(0);
   });
 
   it("has gradient text effect on main heading", () => {
@@ -96,5 +93,35 @@ describe("Landing Page", () => {
       container.querySelector('[class*="gradient"]') ||
       container.querySelector('[class*="bg-clip-text"]');
     expect(gradientText).toBeTruthy();
+  });
+
+  it("displays app branding as Mantiq", () => {
+    render(<LandingPage />, { wrapper: createWrapper() });
+
+    // Check for Mantiq branding - appears in multiple places
+    const mantiqElements = screen.queryAllByText(/Mantiq/i);
+    expect(mantiqElements.length).toBeGreaterThan(0);
+  });
+
+  it("has sign in link", () => {
+    render(<LandingPage />, { wrapper: createWrapper() });
+
+    const signInLink = document.querySelector('a[href="/signin"]');
+    expect(signInLink).toBeTruthy();
+  });
+
+  it("displays about section with author info", () => {
+    render(<LandingPage />, { wrapper: createWrapper() });
+
+    // Author name appears multiple times in the about section
+    const authorElements = screen.queryAllByText(/Muhammad Talha Yaseen/i);
+    expect(authorElements.length).toBeGreaterThan(0);
+  });
+
+  it("has contact us button", () => {
+    render(<LandingPage />, { wrapper: createWrapper() });
+
+    const contactButton = screen.getByRole("button", { name: /Contact Us/i });
+    expect(contactButton).toBeInTheDocument();
   });
 });

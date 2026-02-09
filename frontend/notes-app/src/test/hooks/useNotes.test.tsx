@@ -7,6 +7,13 @@ import {
   useCreateNote,
   useUpdateNote,
   useDeleteNote,
+  usePinNote,
+  useUnpinNote,
+  useFavoriteNote,
+  useUnfavoriteNote,
+  useTrashNote,
+  useRestoreNote,
+  usePermanentDeleteNote,
 } from "@/hooks/useNotes";
 import * as noteService from "@/services/noteServices";
 import type { ReactNode } from "react";
@@ -108,7 +115,6 @@ describe("useNotes Hooks", () => {
       result.current.mutate(newNote);
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      // TanStack Query passes mutation context as second argument
       expect(noteService.createNote).toHaveBeenCalled();
       expect(vi.mocked(noteService.createNote).mock.calls[0][0]).toEqual(
         newNote,
@@ -172,8 +178,148 @@ describe("useNotes Hooks", () => {
       result.current.mutate(noteId);
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      // Check first argument of first call
       expect(vi.mocked(noteService.deleteNote).mock.calls[0][0]).toBe(noteId);
+    });
+  });
+
+  describe("usePinNote", () => {
+    it("pins a note successfully", async () => {
+      const noteId = "1";
+
+      vi.mocked(noteService.pinNote).mockResolvedValue({
+        status: "success",
+        data: { note: { _id: noteId, isPinned: true } },
+      } as any);
+
+      const { result } = renderHook(() => usePinNote(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(noteId);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      // Check first argument only (TanStack Query passes additional context)
+      expect(vi.mocked(noteService.pinNote).mock.calls[0][0]).toBe(noteId);
+    });
+  });
+
+  describe("useUnpinNote", () => {
+    it("unpins a note successfully", async () => {
+      const noteId = "1";
+
+      vi.mocked(noteService.unpinNote).mockResolvedValue({
+        status: "success",
+        data: { note: { _id: noteId, isPinned: false } },
+      } as any);
+
+      const { result } = renderHook(() => useUnpinNote(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(noteId);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(vi.mocked(noteService.unpinNote).mock.calls[0][0]).toBe(noteId);
+    });
+  });
+
+  describe("useFavoriteNote", () => {
+    it("favorites a note successfully", async () => {
+      const noteId = "1";
+
+      vi.mocked(noteService.favoriteNote).mockResolvedValue({
+        status: "success",
+        data: { note: { _id: noteId, isFavorite: true } },
+      } as any);
+
+      const { result } = renderHook(() => useFavoriteNote(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(noteId);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(vi.mocked(noteService.favoriteNote).mock.calls[0][0]).toBe(noteId);
+    });
+  });
+
+  describe("useUnfavoriteNote", () => {
+    it("unfavorites a note successfully", async () => {
+      const noteId = "1";
+
+      vi.mocked(noteService.unfavoriteNote).mockResolvedValue({
+        status: "success",
+        data: { note: { _id: noteId, isFavorite: false } },
+      } as any);
+
+      const { result } = renderHook(() => useUnfavoriteNote(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(noteId);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(vi.mocked(noteService.unfavoriteNote).mock.calls[0][0]).toBe(noteId);
+    });
+  });
+
+  describe("useTrashNote", () => {
+    it("trashes a note successfully", async () => {
+      const noteId = "1";
+
+      vi.mocked(noteService.trashNote).mockResolvedValue({
+        status: "success",
+        data: { note: { _id: noteId, isTrash: true } },
+      } as any);
+
+      const { result } = renderHook(() => useTrashNote(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(noteId);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(vi.mocked(noteService.trashNote).mock.calls[0][0]).toBe(noteId);
+    });
+  });
+
+  describe("useRestoreNote", () => {
+    it("restores a note from trash successfully", async () => {
+      const noteId = "1";
+
+      vi.mocked(noteService.restoreNote).mockResolvedValue({
+        status: "success",
+        data: { note: { _id: noteId, isTrash: false } },
+      } as any);
+
+      const { result } = renderHook(() => useRestoreNote(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(noteId);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(vi.mocked(noteService.restoreNote).mock.calls[0][0]).toBe(noteId);
+    });
+  });
+
+  describe("usePermanentDeleteNote", () => {
+    it("permanently deletes a note successfully", async () => {
+      const noteId = "1";
+
+      vi.mocked(noteService.permanentDeleteNote).mockResolvedValue({
+        status: "success",
+        message: "Note permanently deleted",
+      } as any);
+
+      const { result } = renderHook(() => usePermanentDeleteNote(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate(noteId);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(vi.mocked(noteService.permanentDeleteNote).mock.calls[0][0]).toBe(noteId);
     });
   });
 });
