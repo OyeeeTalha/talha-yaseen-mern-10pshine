@@ -11,6 +11,11 @@ import LocalOfferRoundedIcon from "@mui/icons-material/LocalOfferRounded";
 import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
+import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
+
 import { Button } from "@/components/ui/button";
 import { useGetNoteById, useUpdateNote } from "@/hooks/useNotes";
 import { useGetCategories, useCreateCategory } from "@/hooks/useCategories";
@@ -53,6 +58,8 @@ function Editor() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isContentLoaded, setIsContentLoaded] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+
 
   // Toast hook
   const { toasts, hideToast, success, error: showError } = useToast();
@@ -396,9 +403,9 @@ function Editor() {
         onItemClick={setActiveSidebarItem}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-[#0d1117]">
         {/* Top Bar for specific note actions */}
-        <header className="h-16 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0 bg-[#0d1117]">
+        <header className="h-16 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0 bg-[#0d1117] z-10">
           <div className="flex items-center gap-4">
             <Button
               onClick={async () => {
@@ -426,6 +433,7 @@ function Editor() {
                 navigate("/dashboard");
               }}
               className="text-gray-400 hover:text-white transition-colors"
+              variant="ghost"
             >
               <ArrowBackRoundedIcon />
             </Button>
@@ -508,6 +516,148 @@ function Editor() {
                 <span>Share</span>
               </button>
             )}
+
+            {/* Export Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 text-gray-300 hover:bg-white/10 rounded-full text-sm font-medium transition-all"
+              >
+                <FileDownloadRoundedIcon sx={{ fontSize: 18 }} />
+                <span>Export</span>
+              </button>
+
+              {isExportMenuOpen && (
+                <>
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-[#161b22] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                    <button
+                      onClick={async () => {
+                        setIsExportMenuOpen(false);
+                        if (!editor) return;
+                        const markdown = await editor.blocksToMarkdownLossy(
+                          editor.document,
+                        );
+                        const fullMarkdown = `# ${title}\n\n${markdown}`;
+                        const blob = new Blob([fullMarkdown], { type: "text/markdown" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `${title}.md`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      <CodeRoundedIcon sx={{ fontSize: 16 }} />
+                      Markdown (.md)
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setIsExportMenuOpen(false);
+                        if (!editor) return;
+                        const html = await editor.blocksToHTMLLossy(editor.document);
+                        const fullHtml = `<!DOCTYPE html><html><head><title>${title}</title><meta charset="utf-8"></head><body style="font-family: sans-serif; padding: 20px;"><h1>${title}</h1>${html}</body></html>`;
+                        const blob = new Blob([fullHtml], { type: "text/html" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `${title}.html`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      <CodeRoundedIcon sx={{ fontSize: 16 }} />
+                      HTML (.html)
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setIsExportMenuOpen(false);
+                        if (!editor) return;
+
+                        try {
+                          // Dynamic imports to keep bundle size small
+                          const { PDFExporter, pdfDefaultSchemaMappings } = await import("@blocknote/xl-pdf-exporter");
+                          const ReactPDFModule = await import("@react-pdf/renderer");
+                          const { pdf } = ReactPDFModule;
+
+                          // Create exporter using BlockNote's native schema mappings
+                          const exporter = new PDFExporter(editor.schema, pdfDefaultSchemaMappings);
+
+                          // Build title header element using React.createElement
+                          const { createElement } = await import("react");
+                          const headerEl = createElement(
+                            ReactPDFModule.Text,
+                            { style: { fontSize: 24, fontWeight: "bold", marginBottom: 20 } },
+                            title
+                          );
+
+                          // Convert blocks to a react-pdf document with title header
+                          const pdfDocument = await exporter.toReactPDFDocument(editor.document, {
+                            header: headerEl,
+                          });
+
+                          // Render to blob and trigger download
+                          const blob = await pdf(pdfDocument).toBlob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `${title}.pdf`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        } catch (err) {
+                          console.error("PDF export failed:", err);
+                          showError(`PDF export failed: ${err instanceof Error ? err.message : String(err)}`);
+                        }
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      <PictureAsPdfRoundedIcon sx={{ fontSize: 16 }} />
+                      PDF (.pdf)
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setIsExportMenuOpen(false);
+                        if (!editor) return;
+                        const html = await editor.blocksToHTMLLossy(editor.document);
+                        const header =
+                          "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                          "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                          "xmlns='http://www.w3.org/TR/REC-html40'>" +
+                          "<head><meta charset='utf-8'><title>" +
+                          title +
+                          "</title></head><body><h1>" +
+                          title +
+                          "</h1>";
+                        const footer = "</body></html>";
+                        const sourceHTML = header + html + footer;
+
+                        const blob = new Blob(["\ufeff", sourceHTML], {
+                          type: "application/msword",
+                        });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `${title}.doc`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      <DescriptionRoundedIcon sx={{ fontSize: 16 }} />
+                      Word Document
+                    </button>
+                  </div>
+
+                  {/* Overlay to close dropdown when clicking outside */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsExportMenuOpen(false)}
+                  />
+                </>
+              )}
+            </div>
+
             {/* Only show Save button when user can edit */}
             {canEdit && (
               <button
@@ -554,38 +704,38 @@ function Editor() {
           />
         )}
 
-        {/* Editor Content Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="max-w-4xl mx-auto px-8 py-10">
-            {/* Note Meta (Title, Category, Tags) */}
-            <div className="mb-8 space-y-6">
-              {/* Title Input */}
+        {/* Editor Content Area - Page Layout */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0d1117] p-8">
+          <div className="max-w-4xl mx-auto bg-[#161b22] min-h-[calc(100vh-8rem)] rounded-xl shadow-2xl border border-white/5 flex flex-col relative">
+
+            {/* Page Content */}
+            <div className="px-16 py-16 flex-1">
+              {/* Note Title */}
               <input
                 type="text"
                 value={title}
                 onChange={(e) => !isReadOnly && setTitle(e.target.value)}
                 disabled={isReadOnly}
                 readOnly={isReadOnly}
-                className={`w-full bg-transparent text-4xl font-bold text-white placeholder-gray-600 border-none outline-none ring-0 p-0 ${isReadOnly ? "cursor-not-allowed opacity-80" : ""}`}
+                className={`w-full bg-transparent text-5xl font-bold text-white placeholder-gray-600 border-none outline-none ring-0 p-0 mb-10 ${isReadOnly ? "cursor-not-allowed opacity-80" : ""}`}
                 placeholder="Note Title"
               />
 
-              {/* Meta Controls */}
-              <div className="flex flex-col gap-4">
-                {/* Category Selector - Only visible to owner */}
+              {/* Meta Controls Grid */}
+              <div className="grid grid-cols-[100px_1fr] gap-y-6 mb-10 items-start">
+                {/* Category Row */}
                 {noteData?.userId === profileData?.data?.user?._id && (
-                  <div className="flex items-center gap-3 text-gray-400 group relative">
-                    <div className="w-8 flex justify-center">
-                      <CategoryRoundedIcon sx={{ fontSize: 20 }} />
+                  <>
+                    <div className="flex items-center gap-2 text-gray-500 pt-1.5">
+                      <CategoryRoundedIcon sx={{ fontSize: 18 }} />
+                      <span className="text-sm font-medium">Category</span>
                     </div>
-                    <span className="text-sm w-20">Category</span>
-
                     <div className="relative">
                       <button
                         onClick={() =>
                           setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
                         }
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-white/10 hover:bg-white/5 text-gray-300 transition-all min-w-35 justify-between"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-white/10 hover:bg-white/5 text-gray-300 transition-all min-w-[140px] justify-between"
                       >
                         <span>{selectedCategoryName}</span>
                         <KeyboardArrowDownRoundedIcon
@@ -596,7 +746,7 @@ function Editor() {
                       </button>
 
                       {isCategoryDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-2 w-56 bg-[#161b22] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute top-full left-0 mt-2 w-56 bg-[#1f2428] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                           <div className="p-1">
                             <div className="max-h-48 overflow-y-auto custom-scrollbar">
                               {/* Void option */}
@@ -606,7 +756,6 @@ function Editor() {
                                   setSelectedCategoryId(newCategoryId);
                                   setIsCategoryDropdownOpen(false);
 
-                                  // Optimistically update the note's category
                                   if (noteId) {
                                     updateNote.mutate({
                                       id: noteId,
@@ -614,9 +763,7 @@ function Editor() {
                                         title,
                                         category: newCategoryId,
                                         tags,
-                                        content: JSON.stringify(
-                                          editor.document,
-                                        ),
+                                        content: JSON.stringify(editor.document),
                                       },
                                     });
                                   }
@@ -631,11 +778,8 @@ function Editor() {
                                   <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                                 )}
                               </button>
-                              {/* Filter out Void category from the list */}
                               {categories
-                                .filter(
-                                  (cat) => cat.name.toLowerCase() !== "void",
-                                )
+                                .filter((cat) => cat.name.toLowerCase() !== "void")
                                 .map((cat) => (
                                   <button
                                     key={cat.id}
@@ -644,7 +788,6 @@ function Editor() {
                                       setSelectedCategoryId(newCategoryId);
                                       setIsCategoryDropdownOpen(false);
 
-                                      // Optimistically update the note's category
                                       if (noteId) {
                                         updateNote.mutate({
                                           id: noteId,
@@ -652,9 +795,7 @@ function Editor() {
                                             title,
                                             category: newCategoryId,
                                             tags,
-                                            content: JSON.stringify(
-                                              editor.document,
-                                            ),
+                                            content: JSON.stringify(editor.document),
                                           },
                                         });
                                       }
@@ -697,69 +838,71 @@ function Editor() {
                           </div>
                         </div>
                       )}
+                      {/* Overlay */}
+                      {isCategoryDropdownOpen && (
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setIsCategoryDropdownOpen(false)}
+                        />
+                      )}
                     </div>
-
-                    {/* Overlay to close dropdown when clicking outside */}
-                    {isCategoryDropdownOpen && (
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setIsCategoryDropdownOpen(false)}
-                      />
-                    )}
-                  </div>
+                  </>
                 )}
 
-                {/* Tags Input */}
-                <div className="flex items-start gap-3 text-gray-400 group">
-                  <div className="w-8 flex justify-center mt-1.5">
-                    <LocalOfferRoundedIcon sx={{ fontSize: 20 }} />
-                  </div>
-                  <span className="text-sm w-20 mt-1.5 ">Tags</span>
-                  <div className="flex-1 flex flex-wrap items-center gap-2 min-h-8">
-                    {tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-800 text-gray-300 text-xs border border-white/5 group-hover:border-white/10"
-                      >
-                        {tag}
-                        {!isReadOnly && (
-                          <button
-                            onClick={() => removeTag(tag)}
-                            className="hover:text-white ml-1"
-                          >
-                            &times;
-                          </button>
-                        )}
-                      </span>
-                    ))}
-                    {!isReadOnly && (
-                      <input
-                        type="text"
-                        className="bg-transparent text-sm text-white placeholder-gray-600 outline-none min-w-30"
-                        placeholder="Add a tag..."
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        onKeyDown={handleAddTag}
-                      />
-                    )}
-                  </div>
+                {/* Tags Row */}
+                <div className="flex items-center gap-2 text-gray-500 pt-1.5">
+                  <LocalOfferRoundedIcon sx={{ fontSize: 18 }} />
+                  <span className="text-sm font-medium">Tags</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-800 text-gray-300 text-xs border border-white/5 hover:border-white/10 transition-colors"
+                    >
+                      {tag}
+                      {!isReadOnly && (
+                        <button
+                          onClick={() => removeTag(tag)}
+                          className="hover:text-white ml-1 text-gray-500"
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                  {!isReadOnly && (
+                    <input
+                      type="text"
+                      className="bg-transparent text-sm text-white placeholder-gray-600 outline-none min-w-[100px] py-1"
+                      placeholder="Add a tag..."
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleAddTag}
+                    />
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* BlockNote Editor */}
-            <div className="editor-wrapper min-h-[500px]">
-              <BlockNoteView
-                editor={editor}
-                editable={!isReadOnly}
-                theme="dark"
-              />
+              {/* Divider */}
+              <div className="h-px bg-white/5 w-full mb-8" />
+
+              {/* BlockNote Editor */}
+              <div className="editor-wrapper min-h-[500px]">
+                <BlockNoteView
+                  editor={editor}
+                  editable={!isReadOnly}
+                  theme="dark"
+                />
+              </div>
             </div>
           </div>
+          {/* Bottom spacer */}
+          <div className="h-10"></div>
         </div>
       </main>
 
-    </div>
+    </div >
   );
 }
 
