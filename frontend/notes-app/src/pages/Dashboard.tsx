@@ -303,13 +303,16 @@ function Dashboard() {
             {selectedCategory !== "Trash" && pinnedNotes.length > 0 && (
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <div className="flex items-center justify-center text-primary ">
-                      <PushPinRoundedIcon sx={{ fontSize: 22 }} />
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center justify-center text-primary">
+                      <PushPinRoundedIcon sx={{ fontSize: 18 }} />
                     </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
                       Pinned
                     </h3>
+                    <span className="text-xs font-medium text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
+                      {pinnedNotes.length}
+                    </span>
                   </div>
                   {pinnedNotes.length > 3 && (
                     <button
@@ -359,35 +362,35 @@ function Dashboard() {
             {/* Main Notes Section */}
             <section>
               <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2 text-white">
-                  <h2 className="text-xl font-bold">{selectedCategory}</h2>
-                  <span className="text-sm text-gray-500 font-medium ml-1">
-                    ({otherNotes.length})
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold text-white">{selectedCategory}</h2>
+                  <span className="text-xs font-medium text-gray-400 bg-white/5 px-2.5 py-1 rounded-full">
+                    {otherNotes.length}
                   </span>
                 </div>
 
                 {/* View Toggle Buttons */}
                 {otherNotes.length > 0 && (
-                  <div className="h-8  flex items-center gap-1 bg-gray-800/50 rounded  border border-white/5">
+                  <div className="flex items-center p-1 bg-white/5 rounded-lg border border-white/5">
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`h-8 w-8  rounded transition-all ${viewMode === "grid"
-                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                      className={`flex items-center justify-center h-7 w-7 rounded-md transition-all duration-200 ${viewMode === "grid"
+                        ? "bg-primary text-white shadow-sm"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
                         }`}
                       title="Grid View"
                     >
-                      <GridViewRoundedIcon sx={{ fontSize: 16 }} />
+                      <GridViewRoundedIcon sx={{ fontSize: 15 }} />
                     </button>
                     <button
                       onClick={() => setViewMode("list")}
-                      className={`h-8 w-8  rounded transition-all ${viewMode === "list"
-                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                      className={`flex items-center justify-center h-7 w-7 rounded-md transition-all duration-200 ${viewMode === "list"
+                        ? "bg-primary text-white shadow-sm"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
                         }`}
                       title="List View"
                     >
-                      <ViewListRoundedIcon sx={{ fontSize: 16 }} />
+                      <ViewListRoundedIcon sx={{ fontSize: 15 }} />
                     </button>
                   </div>
                 )}

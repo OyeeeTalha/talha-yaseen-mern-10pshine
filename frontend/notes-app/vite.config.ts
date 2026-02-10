@@ -12,6 +12,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: [
+      "pako/lib/zlib/zstream.js",
+      "pako/lib/zlib/deflate.js",
+      "pako/lib/zlib/inflate.js",
+      "pako/lib/zlib/constants.js",
+    ],
+  },
   test: {
     globals: true,
     environment: "happy-dom",
