@@ -11,10 +11,10 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import PushPinRoundedIcon from "@mui/icons-material/PushPinRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import {
   useCreateNote,
   useGetAllNotes,
-  useDeleteNote,
   usePinNote,
   useUnpinNote,
   useFavoriteNote,
@@ -31,19 +31,20 @@ import { useToast } from "@/hooks/useToast";
 import { useConfirm } from "@/hooks/useConfirm";
 import { ToastContainer } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-
-// Helper function to format date
+import { useGetDailyQuote } from "@/hooks/useAI";
 
 function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("All Notes");
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [shareNoteId, setShareNoteId] = useState<string | null>(null);
+
   // Load view mode from localStorage or default to "grid"
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     const saved = localStorage.getItem("notesViewMode");
     return (saved as "grid" | "list") || "grid";
   });
+
   const navigate = useNavigate();
 
   // Toast and Confirm hooks
@@ -56,12 +57,15 @@ function Dashboard() {
     localStorage.setItem("notesViewMode", viewMode);
   }, [viewMode]);
 
+  // Fetch Daily Quote using custom hook
+  const { data: dailyQuote, isLoading: isLoadingQuote } = useGetDailyQuote();
+
   // Hooks
   const { data: notes = [], isLoading } = useGetAllNotes();
   const { data: profileData } = useGetProfile();
   useGetCategories(); // Prefetch categories for sidebar
   const { mutate: createNote, isPending } = useCreateNote();
-  const { mutate: deleteNote } = useDeleteNote();
+
   const { mutate: pinNote } = usePinNote();
   const { mutate: unpinNote } = useUnpinNote();
   const { mutate: favoriteNote } = useFavoriteNote();
@@ -69,6 +73,7 @@ function Dashboard() {
   const { mutate: trashNote } = useTrashNote();
   const { mutate: restoreNote } = useRestoreNote();
   const { mutate: permanentDeleteNote } = usePermanentDeleteNote();
+
 
   // Get user's display name or first name, fallback to name or "User"
   const userName =
@@ -160,24 +165,6 @@ function Dashboard() {
   const handleAutoPermanentDelete = (noteId: string | undefined) => {
     if (!noteId) return;
     permanentDeleteNote(noteId);
-  };
-
-  const handleDelete = async (noteId: string | undefined) => {
-    if (!noteId) return;
-    const confirmed = await confirm({
-      title: "Delete this note?",
-      message:
-        "Are you sure you want to delete this note? This action cannot be undone.",
-      confirmText: "Delete",
-      cancelText: "Cancel",
-      variant: "danger",
-    });
-
-    if (confirmed) {
-      deleteNote(noteId, {
-        onSuccess: () => success("Note deleted"),
-      });
-    }
   };
 
   // Filter and search logic
@@ -272,24 +259,44 @@ function Dashboard() {
         onItemClick={setSelectedCategory}
       />
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <header className="h-20 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0">
-          <div className="flex flex-col justify-center">
-            <h1 className="text-2xl font-semibold text-white">
-              {getGreeting()}, {userName}
+        <header className="h-24 w-full flex items-center justify-between px-8 border-b border-white/5 shrink-0 bg-[#0d1117]/80 backdrop-blur-xl z-50">
+
+          {/* Left: Greeting & Integrated Quote */}
+          <div className="flex flex-col justify-center gap-1.5 min-w-[300px]">
+            <h1 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2">
+              {getGreeting()}, <span className="opacity-90 capitalize">{userName}</span>
             </h1>
-            <p className="text-gray-400 text-sm mt-1">Capture your ideas</p>
-          </div>
-          <div className="relative w-[320px]">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              <SearchRoundedIcon sx={{ fontSize: 22 }} />
+
+            <div className="flex items-center gap-2 h-5">
+              {isLoadingQuote ? (
+                <div className="h-4 w-48 bg-white/5 rounded animate-pulse" />
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <AutoAwesomeRoundedIcon className="text-primary/70 text-[14px] animate-pulse" />
+                  <p className="text-sm text-gray-400 font-medium tracking-wide bg-gradient-to-r from-gray-400 via-gray-200 to-gray-400 bg-[length:200%_auto] animate-shine bg-clip-text text-transparent truncate max-w-[500px]">
+                    {dailyQuote || "Stay inspired today."}
+                  </p>
+                </div>
+              )}
             </div>
-            <input
-              type="text"
-              placeholder="Search your notes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#1e293b] text-sm text-gray-200 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-primary/50 placeholder-gray-500 border border-transparent"
-            />
+          </div>
+
+          {/* Right: Search & Actions */}
+          <div className="flex items-center gap-4">
+            {/* Date Badge removed */}
+
+            <div className="relative w-[240px] transition-all duration-300 focus-within:w-[280px]">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 group-focus-within:text-primary transition-colors">
+                <SearchRoundedIcon sx={{ fontSize: 20 }} />
+              </div>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#161b22] text-sm text-gray-200 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-gray-700 placeholder-gray-600 border border-transparent transition-all duration-200 hover:bg-[#1c2128]"
+              />
+            </div>
           </div>
         </header>
 
@@ -304,22 +311,19 @@ function Dashboard() {
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex items-center justify-center text-primary">
-                      <PushPinRoundedIcon sx={{ fontSize: 18 }} />
+                    <div className="flex items-center justify-center text-primary/80">
+                      <PushPinRoundedIcon sx={{ fontSize: 16 }} />
                     </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-                      Pinned
+                    <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                      Pinned Notes
                     </h3>
-                    <span className="text-xs font-medium text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
-                      {pinnedNotes.length}
-                    </span>
                   </div>
                   {pinnedNotes.length > 3 && (
                     <button
                       onClick={() => setIsPinnedExpanded(!isPinnedExpanded)}
                       className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                     >
-                      {isPinnedExpanded ? "View less" : "View all"}
+                      {isPinnedExpanded ? "Show less" : "Show all"}
                     </button>
                   )}
                 </div>
@@ -371,7 +375,7 @@ function Dashboard() {
 
                 {/* View Toggle Buttons */}
                 {otherNotes.length > 0 && (
-                  <div className="flex items-center p-1 bg-white/5 rounded-lg border border-white/5">
+                  <div className="flex items-center gap-1 p-1 bg-[#161b22] rounded-lg border border-white/5">
                     <button
                       onClick={() => setViewMode("grid")}
                       className={`flex items-center justify-center h-7 w-7 rounded-md transition-all duration-200 ${viewMode === "grid"
@@ -380,7 +384,7 @@ function Dashboard() {
                         }`}
                       title="Grid View"
                     >
-                      <GridViewRoundedIcon sx={{ fontSize: 15 }} />
+                      <GridViewRoundedIcon sx={{ fontSize: 16 }} />
                     </button>
                     <button
                       onClick={() => setViewMode("list")}
@@ -390,7 +394,7 @@ function Dashboard() {
                         }`}
                       title="List View"
                     >
-                      <ViewListRoundedIcon sx={{ fontSize: 15 }} />
+                      <ViewListRoundedIcon sx={{ fontSize: 16 }} />
                     </button>
                   </div>
                 )}
@@ -398,28 +402,28 @@ function Dashboard() {
 
               {otherNotes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-20 text-center">
-                  <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-[#161b22] rounded-2xl flex items-center justify-center mb-4 border border-white/5">
                     {selectedCategory === "Trash" ? (
                       <DeleteRoundedIcon
                         className="text-gray-600"
-                        sx={{ fontSize: 32 }}
+                        sx={{ fontSize: 24 }}
                       />
                     ) : (
                       <DescriptionRoundedIcon
                         className="text-gray-600"
-                        sx={{ fontSize: 32 }}
+                        sx={{ fontSize: 24 }}
                       />
                     )}
                   </div>
                   <h3 className="text-gray-300 font-medium">
                     {selectedCategory === "Trash"
-                      ? "Trash is empty"
-                      : "No notes found"}
+                      ? "Empty Trash"
+                      : "No notes here"}
                   </h3>
                   <p className="text-gray-500 text-sm mt-1">
                     {selectedCategory === "Trash"
-                      ? "Deleted notes will appear here"
-                      : "Create a new note to get started"}
+                      ? "Deleted items will show up here"
+                      : "Create your first note to get started"}
                   </p>
                 </div>
               ) : (
@@ -428,27 +432,27 @@ function Dashboard() {
                   {viewMode === "list" && (
                     <div className="flex items-center gap-6 px-6 py-3 mb-2 border-b border-white/5">
                       <div className="w-48 shrink-0">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Title
                         </span>
                       </div>
                       <div className="flex-1 min-w-0 px-4">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Snippet
                         </span>
                       </div>
                       <div className="w-32 shrink-0">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Categories
                         </span>
                       </div>
                       <div className="w-24 shrink-0">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Editors
                         </span>
                       </div>
                       <div className="w-24 shrink-0">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Last Edited
                         </span>
                       </div>
