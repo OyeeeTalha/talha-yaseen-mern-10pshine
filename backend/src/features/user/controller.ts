@@ -207,6 +207,7 @@ export const submitReactivationRequest = catchAsync(
       if (serviceEmail && servicePassword) {
         const transporter = nodemailer.createTransport({
           service: "gmail",
+          secure: true, // Use TLS
           auth: {
             user: serviceEmail,
             pass: servicePassword,

@@ -17,6 +17,9 @@ import * as timers from "./config/timers.config.js";
 
 const app: Application = express();
 
+// Disable X-Powered-By header to prevent framework version disclosure (security best practice)
+app.disable("x-powered-by");
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
