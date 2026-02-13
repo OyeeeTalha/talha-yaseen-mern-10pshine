@@ -9,5 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
-  }
+  },
+  "include": ["src/**/*"], // Only compile src for production
+  "exclude": ["test/**/*", "node_modules"] // Ignore tests
 }
