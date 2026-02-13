@@ -32,6 +32,8 @@ import { AIPreviewModal } from "@/components/ai/AIPreviewModal";
 
 import { useAI } from "@/hooks/useAI";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import { useCollaboration, getCollaborationColor } from "@/hooks/useCollaboration";
+import { EditorAvatars } from "@/components/EditorAvatars";
 
 type AutosaveStatus = "idle" | "saving" | "saved" | "error" | "offline";
 
@@ -125,14 +127,18 @@ function Editor() {
     tagsRef.current = tags;
   }, [tags]);
 
-  // Sync state when switching to a different note or when data loads after refresh
+  // Sync state when switching to a different note (but not on every noteData refetch)
+  const previousNoteId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (noteData) {
+    // Sync if: 1) noteId changed, OR 2) initial load (previousNoteId is undefined and noteData exists)
+    if (noteData && (noteId !== previousNoteId.current)) {
+      logger.info({ msg: "Syncing note data", noteId, previousNoteId: previousNoteId.current, reason: noteId !== previousNoteId.current ? "noteId changed" : "initial load" });
       setTitle(noteData.title || "Untitled Note");
       setSelectedCategoryId(noteData.category || null);
       setTags(noteData.tags || []);
+      previousNoteId.current = noteId;
     }
-  }, [noteId, noteData]); // Sync when noteId changes OR when noteData loads
+  }, [noteId, noteData]);
 
   // Get selected category name for display
   const selectedCategoryName = selectedCategoryId
@@ -152,19 +158,64 @@ function Editor() {
     return undefined;
   }, [noteData, noteId]);
 
-  // Initialize BlockNote editor
-  const editor = useCreateBlockNote();
+  // Real-time collaboration setup
+  const profileUser = (profileData as any)?.data?.user;
+  const collaborationUser = useMemo(() => ({
+    name: profileUser?.displayName || profileUser?.name || "Anonymous",
+    color: getCollaborationColor(profileUser?._id || "anonymous"),
+  }), [profileUser?.displayName, profileUser?.name, profileUser?._id]);
 
-  // Load content into editor when note changes
+  const { provider, fragment, isSynced, hasInitialContent, isConnected: isCollabConnected } = useCollaboration({
+    noteId,
+    user: collaborationUser,
+    enabled: canEdit,
+  });
+
+  // Initialize BlockNote editor with collaboration
+  // deps include collaborationUser.name so editor recreates once profile loads
+  const editor = useCreateBlockNote(
+    {
+      collaboration: provider ? {
+        provider,
+        fragment,
+        user: collaborationUser,
+      } : undefined,
+    },
+    [noteId, provider ? "collab" : "solo"],
+  );
+
+  // Track content initialization to prevent duplicate loading
+  const contentInitRef = useRef(false);
+
+  // Reset content init flag when noteId changes
   useEffect(() => {
-    if (editor && noteData) {
-      if (parsedContent) {
-        editor.replaceBlocks(editor.document, parsedContent);
-      }
-      // Mark content as loaded after a short delay (even if content is empty for new notes)
-      setTimeout(() => setIsContentLoaded(true), 100);
+    contentInitRef.current = false;
+    setIsContentLoaded(false);
+  }, [noteId]);
+
+  // Load content into editor - handles both collaboration and solo modes
+  useEffect(() => {
+    if (!editor || !noteData || contentInitRef.current) return;
+
+    if (provider && !isSynced) {
+      // Collaboration mode but not synced yet - wait for sync
+      return;
     }
-  }, [editor, parsedContent, noteData]);
+
+    if (provider && isSynced && hasInitialContent) {
+      // Yjs already has content from server, editor is populated via collaboration
+      contentInitRef.current = true;
+      setTimeout(() => setIsContentLoaded(true), 100);
+      return;
+    }
+
+    // Solo mode OR Yjs is empty (first client) - load from noteData
+    if (parsedContent) {
+      editor.replaceBlocks(editor.document, parsedContent);
+    }
+    contentInitRef.current = true;
+    setTimeout(() => setIsContentLoaded(true), 100);
+  }, [editor, noteData, provider, isSynced, hasInitialContent, parsedContent]);
 
   // Debounced autosave function
   const triggerAutosave = useMemo(
@@ -212,7 +263,7 @@ function Editor() {
 
   // Initialize WebSocket and autosave
   useEffect(() => {
-    if (!noteId) return;
+    if (!noteId || isReadOnly) return; // Skip socket connection for readonly notes
 
     // Connect to WebSocket
     socketService.connect();
@@ -235,7 +286,7 @@ function Editor() {
     return () => {
       // Only save if content was loaded and user can edit
       // This prevents saving empty content during initial load
-      if (editor && isContentLoaded && !isReadOnly) {
+      if (editor && isContentLoaded) {
         const finalPayload = {
           noteId,
           title,
@@ -255,11 +306,11 @@ function Editor() {
 
   // Handle browser close, refresh, or tab close
   useEffect(() => {
-    if (!noteId || !editor) return;
+    if (!noteId || !editor || isReadOnly) return; // Skip for readonly notes
 
     const handleBeforeUnload = () => {
-      // Only save if content was loaded and user can edit
-      if (!isContentLoaded || isReadOnly) return;
+      // Only save if content was loaded
+      if (!isContentLoaded) return;
 
       // Use synchronous save for page unload (Beacon API)
       const finalPayload = {
@@ -283,7 +334,7 @@ function Editor() {
 
   // Trigger autosave when content or metadata changes
   useEffect(() => {
-    if (!noteId || !editor) return;
+    if (!noteId || !editor || isReadOnly) return; // Skip for readonly notes
 
     const handleContentChange = () => {
       setAutosaveStatus("idle");
@@ -296,12 +347,12 @@ function Editor() {
     return () => {
       // Cleanup
     };
-  }, [editor, noteId, triggerAutosave]);
+  }, [editor, noteId, triggerAutosave, isReadOnly]);
 
   // Trigger autosave when title, category, or tags change
   useEffect(() => {
-    // Don't autosave on initial mount
-    if (!noteId || !isContentLoaded) return;
+    // Don't autosave on initial mount or for readonly notes
+    if (!noteId || !isContentLoaded || isReadOnly) return;
     triggerAutosave();
   }, [
     title,
@@ -310,10 +361,13 @@ function Editor() {
     noteId,
     isContentLoaded,
     triggerAutosave,
+    isReadOnly,
   ]);
 
   // Monitor connection status
   useEffect(() => {
+    if (isReadOnly) return; // Skip connection monitoring for readonly notes
+
     const checkConnection = setInterval(() => {
       if (!socketService.isConnected() && noteId) {
         setAutosaveStatus("offline");
@@ -321,7 +375,7 @@ function Editor() {
     }, 5000);
 
     return () => clearInterval(checkConnection);
-  }, [noteId]);
+  }, [noteId, isReadOnly]);
 
   // Save Function (Manual Save)
   const handleSave = async () => {
@@ -379,30 +433,45 @@ function Editor() {
         { name: categoryName },
         {
           onSuccess: (response) => {
-            // Update to the real ID from the server
-            setSelectedCategoryId(response.data.category.id);
+            logger.info({ msg: "Category created", categoryId: response.data.category.id, categoryName: response.data.category.name });
+            
+            const newCategoryId = response.data.category.id;
+            
+            // Update both state and ref immediately
+            setSelectedCategoryId(newCategoryId);
+            categoryRef.current = newCategoryId;
 
             // Optimistically update the note with the new category
-            if (noteId) {
+            if (noteId && editor) {
               const notePayload = {
                 title,
-                category: response.data.category.id,
+                category: newCategoryId,
                 tags,
                 content: JSON.stringify(editor.document),
               };
+
+              logger.info({ msg: "Updating note with category", noteId, categoryId: newCategoryId });
 
               updateNote.mutate(
                 { id: noteId, data: notePayload },
                 {
                   onSuccess: () => {
+                    logger.info({ msg: "Category assigned successfully", noteId, categoryId: newCategoryId });
                     success("Category assigned");
                   },
                   onError: (error) => {
+                    logger.error({ msg: "Failed to assign category", error, noteId });
                     showError(`Failed to assign category: ${error.message}`);
                   },
                 },
               );
+            } else {
+              logger.warn({ msg: "Cannot assign category - missing noteId or editor", noteId: !!noteId, editor: !!editor });
             }
+          },
+          onError: (error) => {
+            logger.error({ msg: "Failed to create category", error });
+            showError(`Failed to create category: ${error.message}`);
           },
         },
       );
@@ -673,18 +742,27 @@ function Editor() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Ask AI Button */}
-            <div className="relative mr-2">
-              <Button
-                onClick={handleAskAI}
-                variant="outline"
-                size="sm"
-                className="h-9 gap-2 bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all font-medium rounded-full px-4"
-              >
-                <AutoAwesomeRoundedIcon sx={{ fontSize: 16 }} />
-                Ask AI
-              </Button>
-            </div>
+            {/* Editor Avatars - Only show for note owners */}
+            {noteData?.userId === profileData?.data?.user?._id && noteData?.editors && noteData.editors.length > 0 && (
+              <EditorAvatars 
+                editors={noteData.editors} 
+                currentUserId={profileData?.data?.user?._id}
+              />
+            )}
+            {/* Ask AI Button - Hide for readonly shared notes */}
+            {!isReadOnly && (
+              <div className="relative mr-2">
+                <Button
+                  onClick={handleAskAI}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-2 bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all font-medium rounded-full px-4"
+                >
+                  <AutoAwesomeRoundedIcon sx={{ fontSize: 16 }} />
+                  Ask AI
+                </Button>
+              </div>
+            )}
 
             {/* Only show Share button for owned notes (where user ID matches creator) */}
             {noteData?.userId === profileData?.data?.user?._id && (
