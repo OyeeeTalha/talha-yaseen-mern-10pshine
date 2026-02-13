@@ -15,8 +15,13 @@ function ProtectedRoutes() {
 
   // Check if user object exists and has the user property (standard Auth.js session structure)
   if (user && user.user) {
-    // Check for account deactivation
-    if ((user.user as any).isDeactivated) {
+    const userData = user.user as any;
+
+    // Account State Machine routing:
+    // - isDeleted=true → grace period expired, show reactivation request form
+    // - isDeactivated=true → in grace period, show self-reactivation option
+    // Both cases route to the same page, which handles the UI based on state
+    if (userData.isDeleted || userData.isDeactivated) {
       return <Navigate to="/account-deactivated" replace />;
     }
 

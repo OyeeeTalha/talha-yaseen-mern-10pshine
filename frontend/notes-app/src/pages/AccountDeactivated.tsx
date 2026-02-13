@@ -1,14 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { UserAuth } from "@/hooks/userAuth";
 import { useToast } from "@/hooks/useToast";
-
+import { useCountdownTimer, getCooldownTargetDate } from "@/hooks/useCountdownTimer";
 import { ToastContainer } from "@/components/ui/toast";
 import {
-  ACCOUNT_DEACTIVATION_GRACE_PERIOD_SECONDS,
-  REACTIVATION_REQUEST_COOLDOWN_SECONDS
-} from "@/config/timers.config";
-
-const VITE_API_URL = import.meta.env.VITE_API_URL;
+  reactivateAccount,
+  submitReactivationRequest,
+  getAppConfig,
+} from "@/services/userService";
 
 export default function AccountDeactivated() {
   const { user, signout } = UserAuth();
@@ -16,85 +15,49 @@ export default function AccountDeactivated() {
   const [isRequesting, setIsRequesting] = useState(false);
   const [subject, setSubject] = useState("Reactivation Request");
   const [message, setMessage] = useState("");
-  const [canReactivateDirectly, setCanReactivateDirectly] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<string>("");
-
-  // Cooldown states
-  const [requestCooldownLeft, setRequestCooldownLeft] = useState<string | null>(null);
-  const [canRequest, setCanRequest] = useState(true);
+  const [reactivationCooldownSeconds, setReactivationCooldownSeconds] = useState(172800);
 
   // Access the nested user object from the session
-  const userData = user?.user;
+  const userData = user?.user as any;
 
-  // Grace Period Timer
+  // Determine account state
+  const isAccountDeleted = userData?.isDeleted === true;
+
+  // Fetch config from backend
   useEffect(() => {
-    if (userData?.deactivatedAt) {
-      const gracePeriodMs = ACCOUNT_DEACTIVATION_GRACE_PERIOD_SECONDS * 1000;
-      // Backend stores deactivatedAt as Unix timestamp in seconds, convert to Ms
-      const deactivationTime = userData.deactivatedAt * 1000;
-      const targetTime = deactivationTime + gracePeriodMs;
-
-      const updateTimer = () => {
-        const now = Date.now();
-        const diff = targetTime - now;
-
-        if (diff <= 0) {
-          setCanReactivateDirectly(false);
-          setTimeLeft("0d 0h 0m 0s");
-          return;
+    const fetchConfig = async () => {
+      try {
+        const config = await getAppConfig();
+        if (config.REACTIVATION_REQUEST_COOLDOWN_SECONDS) {
+          setReactivationCooldownSeconds(config.REACTIVATION_REQUEST_COOLDOWN_SECONDS);
         }
+      } catch (error) {
+        console.error("Failed to fetch config:", error);
+      }
+    };
+    fetchConfig();
+  }, []);
 
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  // Grace Period Timer - using the countdown hook
+  const graceExpireDate = useMemo(() => {
+    if (isAccountDeleted) return null;
+    return userData?.deactivationExpireAt ? new Date(userData.deactivationExpireAt) : null;
+  }, [userData?.deactivationExpireAt, isAccountDeleted]);
 
-        setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-        setCanReactivateDirectly(true);
-      };
+  const gracePeriodTimer = useCountdownTimer(graceExpireDate);
+  const canReactivateDirectly = !isAccountDeleted && !gracePeriodTimer.isExpired && !!graceExpireDate;
 
-      updateTimer(); // Initial call
-      const interval = setInterval(updateTimer, 1000);
-
-      return () => clearInterval(interval);
+  // Request Cooldown Timer - using the countdown hook
+  const cooldownTargetDate = useMemo(() => {
+    if (!userData?.reactivationRequestSubmitted || !userData?.reactivationRequestSubmittedAt) {
+      return null;
     }
-  }, [userData]);
+    return getCooldownTargetDate(userData.reactivationRequestSubmittedAt, reactivationCooldownSeconds);
+  }, [userData?.reactivationRequestSubmitted, userData?.reactivationRequestSubmittedAt, reactivationCooldownSeconds]);
 
-  // Request Cooldown Timer
-  useEffect(() => {
-    if (userData?.reactivationRequestSubmitted && userData?.reactivationRequestSubmittedAt) {
-      const cooldownMs = REACTIVATION_REQUEST_COOLDOWN_SECONDS * 1000;
-      const lastRequestTime = userData.reactivationRequestSubmittedAt * 1000;
-      const nextRequestTime = lastRequestTime + cooldownMs;
-
-      const updateCooldown = () => {
-        const now = Date.now();
-        const diff = nextRequestTime - now;
-
-        if (diff <= 0) {
-          setCanRequest(true);
-          setRequestCooldownLeft(null);
-          return;
-        }
-
-        setCanRequest(false);
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        setRequestCooldownLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-      };
-
-      updateCooldown();
-      const interval = setInterval(updateCooldown, 1000);
-      return () => clearInterval(interval);
-    } else {
-      // If not submitted or no timestamp, allow request (or handled by submitted flag in legacy cases)
-      setCanRequest(true);
-    }
-  }, [userData]);
+  const cooldownTimer = useCountdownTimer(cooldownTargetDate);
+  const canRequest = !cooldownTargetDate || cooldownTimer.isExpired;
 
   const handleBackToLogin = async () => {
     await signout();
@@ -103,16 +66,7 @@ export default function AccountDeactivated() {
   const handleReactivate = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${VITE_API_URL}/user/reactivate`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to reactivate account");
-      }
-
+      await reactivateAccount();
       // Simulate progress for UX
       await new Promise((resolve) => setTimeout(resolve, 800));
       success("Account reactivated! Redirecting...");
@@ -123,35 +77,20 @@ export default function AccountDeactivated() {
       showError(error.message || "Failed to reactivate account");
       setLoading(false);
     }
-    // Note: Loading state stays true on success to prevent interaction during redirect
   };
 
   const handleRequestReactivation = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsRequesting(true);
     try {
-      const response = await fetch(`${VITE_API_URL}/user/reactivation-request`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ subject, message }),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to submit request");
-      }
-
+      await submitReactivationRequest(subject, message);
       success("Request submitted successfully. We will contact you shortly.");
-      // Reload to refresh user session data and activate cooldown UI
       setTimeout(() => {
         window.location.reload();
       }, 1500);
     } catch (error: any) {
       showError(error.message || "Failed to submit request");
-      setIsRequesting(false); // Only stop requesting state on error, on success we reload
+      setIsRequesting(false);
     }
   };
 
@@ -160,7 +99,7 @@ export default function AccountDeactivated() {
       <ToastContainer toasts={toasts} onClose={hideToast} />
 
       <div className="bg-[#1a1f2e] border border-white/5 rounded-2xl w-full max-w-[460px] p-8 shadow-2xl text-center">
-        {/* ... Header Icon ... */}
+        {/* Header Icon */}
         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
           <svg
             width="32"
@@ -192,7 +131,7 @@ export default function AccountDeactivated() {
             <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
               <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold mb-2">Time Left To Recover</p>
               <div className="text-2xl font-mono font-bold text-blue-400 tracking-wider">
-                {timeLeft || "Calculated..."}
+                {gracePeriodTimer.timeLeft || "Calculating..."}
               </div>
               <p className="text-xs text-gray-500 mt-2">
                 After this period, your data will be permanently deleted.
@@ -201,15 +140,7 @@ export default function AccountDeactivated() {
 
             {loading && (
               <div className="w-full bg-gray-700/50 rounded-full h-1.5 mb-3 overflow-hidden">
-                <div className="bg-blue-500 h-full rounded-full animate-[shimmer_1s_infinite] w-1/2 mx-auto"></div>
-                {/* Simple indeterminate animation using inline style for simplicity or standard CSS */}
-                <style>{`
-                  @keyframes progress-loading {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(200%); }
-                  }
-                `}</style>
-                <div style={{ animation: 'progress-loading 1.5s infinite linear', width: '50%', height: '100%', background: '#3b82f6', borderRadius: '9999px' }}></div>
+                <div className="bg-blue-500 h-full rounded-full animate-pulse w-full"></div>
               </div>
             )}
 
@@ -228,7 +159,7 @@ export default function AccountDeactivated() {
               <p className="text-xs text-red-400/70 mt-1">Please contact support to restore access.</p>
             </div>
 
-            {!canRequest && requestCooldownLeft ? (
+            {!canRequest && cooldownTimer.timeLeft ? (
               <div className="py-8 px-4 bg-emerald-950/20 border border-emerald-500/20 rounded-xl mb-6 text-center animate-in fade-in zoom-in duration-300">
                 <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-500 ring-1 ring-emerald-500/20">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -240,7 +171,7 @@ export default function AccountDeactivated() {
                 <div className="bg-emerald-950/40 rounded-lg p-3 inline-block border border-emerald-500/10 w-full max-w-[300px]">
                   <p className="text-xs text-emerald-400/80 mb-1">You can send another request in:</p>
                   <p className="text-lg font-mono font-bold text-emerald-400">
-                    {requestCooldownLeft}
+                    {cooldownTimer.timeLeft}
                   </p>
                 </div>
               </div>

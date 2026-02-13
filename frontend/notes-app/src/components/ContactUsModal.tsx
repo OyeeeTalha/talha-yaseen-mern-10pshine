@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import AccessTimeFilledRoundedIcon from "@mui/icons-material/AccessTimeFilledRounded";
 import { useToast } from "@/hooks/useToast";
-import { CONTACT_US_COOLDOWN_SECONDS } from "@/config/timers.config";
+// Local fallback for UX; Backend enforces this via SubmissionLog
+const CONTACT_US_COOLDOWN_SECONDS = 604800; // 7 days
 
 interface ContactUsModalProps {
     isOpen: boolean;
@@ -48,7 +49,8 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        // Use atomic groups equivalent - anchored pattern to prevent backtracking
+        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
         if (!emailRegex.test(email)) {
             showError("Please enter a valid email address.");
             return;
