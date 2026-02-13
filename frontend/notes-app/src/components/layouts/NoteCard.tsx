@@ -126,7 +126,8 @@ function NoteCard(props: NoteCardProps) {
   const EditorAvatars = () => {
     if (editors.length === 0) return null;
 
-    const displayedEditors = editors.slice(0, 3);
+    // Reverse order so most recent editors appear first
+    const displayedEditors = [...editors].reverse().slice(0, 3);
     const remaining = editors.length - 3;
 
     return (
