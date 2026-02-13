@@ -18,6 +18,7 @@ export interface Note {
   isFavorite?: boolean;
   isTrash?: boolean;
   trashedAt?: number | null; // Unix timestamp in seconds
+  expireAt?: string | null; // ISO string expiration date
   isDeleted?: boolean;
   // Sharing fields
   shareId?: string; // Unique share identifier

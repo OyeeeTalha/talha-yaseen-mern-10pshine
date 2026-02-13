@@ -1,14 +1,59 @@
+import { useState } from "react";
 import EditNoteRoundedIcon from "@mui/icons-material/EditNoteRounded";
+import { useToast } from "@/hooks/useToast";
+import { ToastContainer } from "@/components/ui/toast";
+
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 function ComplexFooter() {
+  const { toasts, hideToast, success, error: showError } = useToast();
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleJoinWaitlist = async () => {
+    // Basic Email Format Validation
+    // Use anchored pattern to prevent catastrophic backtracking
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!emailRegex.test(email)) {
+      showError("Please enter a valid email address.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${VITE_API_URL}/waitlist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, type: "contributor_waitlist" }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to join waitlist");
+      }
+
+      success("Welcome to the waitlist! Keep an eye on your inbox.");
+      setEmail("");
+    } catch (error: any) {
+      showError(error.message || "Failed to join waitlist");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <footer className="border-t border-slate-200 dark:border-border-dark bg-background-light dark:bg-background-dark px-6 py-12 lg:px-20">
+    <footer className="border-t border-slate-200 dark:border-border-dark bg-background-light dark:bg-background-dark px-6 py-12 lg:px-20 relative">
+      <ToastContainer toasts={toasts} onClose={hideToast} />
       <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between gap-10">
         <div className="flex flex-col gap-4 max-w-sm">
           <div className="flex items-center gap-1 text-slate-900 dark:text-white">
             <div className="flex items-center justify-center text-primary">
               <EditNoteRoundedIcon sx={{ fontSize: 35 }} />
             </div>
-            <span className="text-lg font-bold">NotesApp</span>
+            <span className="text-xl font-bold tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>Mantiq</span>
           </div>
           <p className="text-sm text-slate-500 max-w-xs">
             Designed for clarity, built for speed. The note-taking app for
@@ -93,25 +138,32 @@ function ComplexFooter() {
         </div>
         <div className="flex flex-col gap-4 w-full md:w-auto md:max-w-md">
           <h4 className="font-bold text-slate-900 dark:text-white">
-            Get in touch
+            Join the Core Team
           </h4>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Questions or feedback? We'd love to hear from you.
+            We're building a team of capable maintainers. Enter your email to receive our technical roadmap and contributor challenge.
           </p>
           <div className="flex gap-2">
             <input
               className="flex-1 min-w-0 bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark rounded-lg px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="Enter your email"
+              placeholder="developer@example.com"
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
             />
-            <button className="bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
-              Subscribe
+            <button
+              onClick={handleJoinWaitlist}
+              disabled={isLoading}
+              className="bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Joining..." : "Join Waitlist"}
             </button>
           </div>
         </div>
       </div>
       <div className="max-w-[1200px] mx-auto mt-12 pt-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">
-        © 2024 NotesApp Inc. All rights reserved.
+        © 2025 Mantiq Inc. All rights reserved.
       </div>
     </footer>
   );
@@ -121,7 +173,7 @@ function SimpleFooter() {
   return (
     <footer className="absolute bottom-6 w-full text-center pt-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">
       <div className="text-center text-sm text-slate-500">
-        © 2026 NotesApp Inc. All rights reserved.
+        © 2025 Mantiq Inc. All rights reserved.
       </div>
     </footer>
   );

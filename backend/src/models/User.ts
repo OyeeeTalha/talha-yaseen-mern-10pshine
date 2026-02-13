@@ -95,6 +95,10 @@ const userSchema = new Schema(
       type: Number, // Unix timestamp in seconds
       default: null,
     },
+    deactivationExpireAt: {
+      type: Date,
+      default: null,
+    },
     reactivationRequestSubmitted: {
       type: Boolean,
       default: false,

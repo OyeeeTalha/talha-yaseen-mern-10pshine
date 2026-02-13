@@ -44,6 +44,11 @@ const notesSchema = new Schema(
       required: false,
       default: null,
     },
+    expireAt: {
+      type: Date,
+      default: null,
+      index: { expires: 0 }, // TTL index: documents expire at the time specified in this field
+    },
     isDeleted: {
       type: Boolean,
       default: false,

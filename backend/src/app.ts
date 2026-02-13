@@ -12,7 +12,13 @@ import noteRoutes from "./features/notes/routes.js";
 
 import userRoutes from "./features/user/routes.js";
 
+import contactRoutes from "./features/contact/routes.js";
+import * as timers from "./config/timers.config.js";
+
 const app: Application = express();
+
+// Disable X-Powered-By header to prevent framework version disclosure (security best practice)
+app.disable("x-powered-by");
 
 app.use(
   cors({
@@ -54,6 +60,14 @@ app.use("/notes", noteRoutes);
 
 app.use("/user", userRoutes);
 
+app.use("/", contactRoutes);
+
+
+
+app.get("/config", (req, res) => {
+  res.status(200).json(timers);
+});
+
 app.get("/", (req, res) => {
   res.status(200).json({
     status: "success",
@@ -70,15 +84,6 @@ app.get("/", (req, res) => {
 
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "OK" });
-});
-
-app.use((req: Request, res: Response, next: NextFunction) => {
-  res.status(404).json({ message: "Not Found" });
-});
-
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Internal Server Error" });
 });
 
 app.all(/(.*)/, (req, res, next) => {
