@@ -289,10 +289,10 @@ function Editor() {
       if (editor && isContentLoaded) {
         const finalPayload = {
           noteId,
-          title,
+          title: titleRef.current,
           content: JSON.stringify(editor.document),
-          category: selectedCategoryId,
-          tags,
+          category: categoryRef.current,
+          tags: tagsRef.current,
         };
 
         // Use sync save for immediate effect
@@ -302,7 +302,7 @@ function Editor() {
         socketService.leaveNote(finalPayload);
       }
     };
-  }, [noteId, editor, title, selectedCategoryId, tags, showError, isContentLoaded, isReadOnly]);
+  }, [noteId, editor, showError, isContentLoaded, isReadOnly]);
 
   // Handle browser close, refresh, or tab close
   useEffect(() => {
@@ -313,12 +313,13 @@ function Editor() {
       if (!isContentLoaded) return;
 
       // Use synchronous save for page unload (Beacon API)
+      // Use refs to always get the latest values
       const finalPayload = {
         noteId,
-        title,
+        title: titleRef.current,
         content: JSON.stringify(editor.document),
-        category: selectedCategoryId,
-        tags,
+        category: categoryRef.current,
+        tags: tagsRef.current,
       };
 
       socketService.saveSync(finalPayload);
@@ -330,7 +331,7 @@ function Editor() {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [noteId, editor, title, selectedCategoryId, tags, isContentLoaded, isReadOnly]);
+  }, [noteId, editor, isContentLoaded, isReadOnly]);
 
   // Trigger autosave when content or metadata changes
   useEffect(() => {
