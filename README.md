@@ -114,6 +114,11 @@ Create a file named `.env` inside the `backend/` folder and add the following ke
 | `GEMINI_API_KEY` | Google Gemini AI API Key (from Google AI Studio) |
 | `FRONTEND_URL` | URL of your frontend (e.g., `http://localhost:5173`) |
 | `NODE_ENV` | Set to `development` for local use |
+| `SERVICE_EMAIL` | The sender address for automated system emails (Nodemailer) (e.g., `bot.mantiq@gmail.com`) |
+| `SERVICE_EMAIL_PASSWORD` | 16-character App Password for the sender email (e.g., `xxxx xxxx xxxx xxxx`) |
+| `ADMIN_EMAIL` | The recipient email for contact form submissions (e.g., `your.email@gmail.com`) |
+
+> **💡 Important:** The `SERVICE_EMAIL_PASSWORD` is **NOT** your regular Gmail password. It is a generated **App Password** that allows the app to send emails securely without disabling 2-Step Verification. You can generate one in your Google Account Security settings.
 
 ### 2. Frontend Configuration (`frontend/notes-app/.env`)
 Create a file named `.env` inside the `frontend/notes-app/` folder and add the following keys:
