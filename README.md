@@ -67,7 +67,7 @@ This application comes packed with essential tools and powerful modern features.
     *   **Pin Notes:** Keep important notes at the top.
     *   **Categories:** Group your notes so you can find them easily.
 *   **⚡ Modern Design:** 
-    *   Fast and looks good on any screen size.
+    *   Clean, minimalist interface designed for focused writing.
     *   **Smart Greeting:** The dashboard welcomes you based on the time of day.
 
 ---
@@ -188,7 +188,7 @@ Experience the flow of Mantiq through these screens.
 ### 5. Shared Public View
 *How your work looks when shared with the world.*
 <!-- TODO: Add screenshot of Shared Note Page here -->
-![Shared Note Page](./Screenshots/shared-note.png)
+![Shared Note Page](./Screenshots/share-note.png)
 
 ### 6. Trash & Recovery
 *Safe deletion with a 30-day recovery window.*
