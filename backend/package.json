@@ -19,6 +19,7 @@
   "dependencies": {
     "@auth/express": "^0.12.1",
     "@auth/mongodb-adapter": "^3.11.1",
+    "@google/generative-ai": "^0.24.1",
     "cookie": "^1.1.1",
     "cors": "^2.8.5",
     "dayjs": "^1.11.19",
@@ -26,6 +27,7 @@
     "express": "^5.2.1",
     "mongodb": "^6.21.0",
     "mongoose": "^9.1.0",
+    "multer": "^2.0.2",
     "nanoid": "^5.1.6",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0",
@@ -37,6 +39,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.0.0",
     "@types/node": "^25.0.9",
     "@types/nodemailer": "^7.0.5",
     "@types/supertest": "^6.0.3",
