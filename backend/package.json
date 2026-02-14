@@ -20,6 +20,7 @@
     "@auth/express": "^0.12.1",
     "@auth/mongodb-adapter": "^3.11.1",
     "@google/generative-ai": "^0.24.1",
+    "@hocuspocus/server": "^3.4.4",
     "cookie": "^1.1.1",
     "cors": "^2.8.5",
     "dayjs": "^1.11.19",
@@ -34,6 +35,8 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "uuid": "^13.0.0",
+    "ws": "^8.19.0",
+    "yjs": "^13.6.29",
     "zod": "^4.2.1"
   },
   "devDependencies": {
@@ -43,6 +46,7 @@
     "@types/node": "^25.0.9",
     "@types/nodemailer": "^7.0.5",
     "@types/supertest": "^6.0.3",
+    "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.17",
     "cross-env": "^10.1.0",
