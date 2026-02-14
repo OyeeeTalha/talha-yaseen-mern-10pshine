@@ -453,7 +453,7 @@ function Dashboard() {
                       </div>
                       <div className="w-24 shrink-0">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Last Edited
+                          {selectedCategory === "Trash" ? "Deletes In" : "Last Edited"}
                         </span>
                       </div>
                       <div className="w-8 shrink-0"></div>
