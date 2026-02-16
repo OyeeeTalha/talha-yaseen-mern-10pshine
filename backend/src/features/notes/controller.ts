@@ -660,7 +660,12 @@ export const createCategory = catchAsync(
 
     res.status(201).json({
       status: "success",
-      data: { category: newCategory },
+      data: { 
+        category: {
+          id: newCategory.id.toString(),
+          name: newCategory.name,
+        }
+      },
     });
   },
 );

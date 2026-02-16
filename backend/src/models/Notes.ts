@@ -69,6 +69,11 @@ const notesSchema = new Schema(
         },
       },
     ],
+    yjsState: {
+      type: Buffer,
+      required: false,
+      default: null,
+    },
 
   },
   {

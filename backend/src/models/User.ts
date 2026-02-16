@@ -6,11 +6,13 @@ const categorySchema = new Schema(
       type: Schema.Types.ObjectId,
       default: () => new Types.ObjectId(),
       required: true,
+      index: false, // Explicitly disable index to prevent global unique constraint
     },
     name: {
       type: String,
       required: true,
       trim: true,
+      index: false, // Explicitly disable index to prevent global unique constraint
     },
   },
   { _id: false },
