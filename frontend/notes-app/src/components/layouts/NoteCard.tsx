@@ -126,7 +126,8 @@ function NoteCard(props: NoteCardProps) {
   const EditorAvatars = () => {
     if (editors.length === 0) return null;
 
-    const displayedEditors = editors.slice(0, 3);
+    // Reverse order so most recent editors appear first
+    const displayedEditors = [...editors].reverse().slice(0, 3);
     const remaining = editors.length - 3;
 
     return (
@@ -289,9 +290,15 @@ function NoteCard(props: NoteCardProps) {
             <EditorAvatars />
           </div>
 
-          {/* Last Edited - Fixed width column */}
+          {/* Last Edited / Deletes In - Fixed width column */}
           <div className="w-24 shrink-0">
-            <span className="text-xs text-gray-500">{date}</span>
+            {isTrash && timeRemaining ? (
+              <span className="text-xs text-red-400 font-medium">
+                {timeRemaining}
+              </span>
+            ) : (
+              <span className="text-xs text-gray-500">{date}</span>
+            )}
           </div>
 
           {/* Menu Button */}
