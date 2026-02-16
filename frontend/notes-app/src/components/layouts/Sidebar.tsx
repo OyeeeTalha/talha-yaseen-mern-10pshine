@@ -4,6 +4,7 @@ import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import FolderSharedRoundedIcon from "@mui/icons-material/FolderSharedRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { UserAuth } from "@/hooks/userAuth";
@@ -65,6 +66,7 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
     { name: "Shared", icon: FolderSharedRoundedIcon },
     { name: "Trash", icon: DeleteRoundedIcon },
   ];
+
 
   const categories = categoriesData || [];
 
@@ -235,17 +237,15 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
                 }}
               >
                 <div
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg group transition-all cursor-pointer ${
-                    activeItem === item.name
-                      ? "bg-primary/10 text-primary"
-                      : "text-white hover:bg-white/5"
-                  }`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg group transition-all cursor-pointer ${activeItem === item.name
+                    ? "bg-primary/10 text-primary"
+                    : "text-white hover:bg-white/5"
+                    }`}
                 >
                   <div className="h-5 gap-3 flex">
                     <div
-                      className={`flex items-center justify-center ${
-                        activeItem === item.name ? "text-primary" : "text-white"
-                      }`}
+                      className={`flex items-center justify-center ${activeItem === item.name ? "text-primary" : "text-white"
+                        }`}
                     >
                       <item.icon sx={{ fontSize: 20 }} />
                     </div>
@@ -258,6 +258,8 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
             </li>
           ))}
         </ul>
+
+
       </div>
 
       {/* Categories Section */}
@@ -292,11 +294,10 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
                     }}
                   >
                     <div
-                      className={`flex items-center gap-1 px-3 py-2.5 rounded-lg group transition-all cursor-pointer ${
-                        activeItem === category.name
-                          ? "bg-primary/10 text-primary"
-                          : "text-white hover:bg-white/5"
-                      }`}
+                      className={`flex items-center gap-1 px-3 py-2.5 rounded-lg group transition-all cursor-pointer ${activeItem === category.name
+                        ? "bg-primary/10 text-primary"
+                        : "text-white hover:bg-white/5"
+                        }`}
                     >
                       <div className="h-5 gap-3 flex items-center w-full">
                         <div className="flex items-center justify-center">
@@ -310,11 +311,10 @@ function Sidebar({ activeItem, onItemClick }: SidebarProps) {
                           ></span>
                         </div>
                         <h2
-                          className={`text-sm font-medium leading-snug ${
-                            activeItem === category.name
-                              ? "text-primary"
-                              : "text-gray-400 group-hover:text-white"
-                          }`}
+                          className={`text-sm font-medium leading-snug ${activeItem === category.name
+                            ? "text-primary"
+                            : "text-gray-400 group-hover:text-white"
+                            }`}
                         >
                           {category.name}
                         </h2>

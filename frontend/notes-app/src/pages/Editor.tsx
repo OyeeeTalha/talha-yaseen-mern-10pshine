@@ -27,6 +27,11 @@ import { logger } from "@/lib/logger";
 import { socketService } from "@/services/socketService";
 import { debounce } from "@/lib/utils";
 import { ShareNoteModal } from "@/components/ShareNoteModal";
+import { AskAIModal } from "@/components/ai/AskAIModal";
+import { AIPreviewModal } from "@/components/ai/AIPreviewModal";
+
+import { useAI } from "@/hooks/useAI";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 
 type AutosaveStatus = "idle" | "saving" | "saved" | "error" | "offline";
 
@@ -42,6 +47,12 @@ function Editor() {
     ownerName?: string;
     shareId?: string;
   } | null;
+
+  // Debug: Log mount/unmount and noteId changes
+  useEffect(() => {
+    logger.info({ msg: "Editor Mounted", noteId });
+    return () => logger.info({ msg: "Editor Unmounted", noteId });
+  }, [noteId]);
 
   const isSharedNote = sharedNoteState?.isSharedNote || false;
   const sharedAccessLevel = sharedNoteState?.accessLevel || "owner";
@@ -59,6 +70,19 @@ function Editor() {
   const [isContentLoaded, setIsContentLoaded] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+
+  // AI State
+  const [isAskAIOpen, setIsAskAIOpen] = useState(false);
+  const [isPreviewAIOpen, setIsPreviewAIOpen] = useState(false);
+
+
+  const [isReviewingAI, setIsReviewingAI] = useState(false);
+  const [aiContext, setAiContext] = useState("");
+  const [aiContextType, setAiContextType] = useState<"selection" | "document">("selection");
+  const [selectedBlocks, setSelectedBlocks] = useState<any[]>([]); // Using any[] to avoid strict BlockNote typing import issues for now
+  const [aiResult, setAiResult] = useState("");
+  const [aiMode, setAiMode] = useState<"generate" | "rewrite" | "shorter" | "longer" | "fix-grammar" | "summarize">("generate");
+  const { mutate: generateAI, isPending: isGeneratingAI } = useAI();
 
 
   // Toast hook
@@ -385,6 +409,149 @@ function Editor() {
     }
   };
 
+  // AI Handlers
+  const handleAskAI = async () => {
+    setAiContext("");
+    setSelectedBlocks([]);
+
+    if (!editor) return;
+
+    const selection = editor.getSelection();
+
+    if (selection && selection.blocks.length > 0) {
+      try {
+        const markdown = await editor.blocksToMarkdownLossy(selection.blocks);
+        console.log("AI Context (Selection):", markdown);
+        setAiContext(markdown);
+        setAiContextType("selection");
+        setSelectedBlocks(selection.blocks);
+      } catch (error) {
+        console.error("Failed to parse selection", error);
+        setAiContext("");
+        setAiContextType("selection");
+      }
+    } else {
+      // No selection found, use full document content
+      try {
+        const markdown = await editor.blocksToMarkdownLossy(editor.document);
+        console.log("AI Context (Document):", markdown);
+        setAiContext(markdown);
+        setAiContextType("document");
+        setSelectedBlocks([]);
+      } catch (error) {
+        console.error("Failed to parse document", error);
+        setAiContext("");
+        setAiContextType("selection");
+      }
+    }
+    setIsAskAIOpen(true);
+  };
+
+  const handleGenerateAI = (prompt: string, mode: "generate" | "rewrite" | "shorter" | "longer" | "fix-grammar" | "summarize") => {
+    setAiMode(mode);
+
+    // Capture current state values for async callback usage
+    const currentContextType = aiContextType;
+    const currentSelectedBlocks = selectedBlocks;
+
+    generateAI(
+      { prompt, context: aiContext, mode },
+      {
+        onSuccess: (data) => {
+          setAiResult(data.result);
+          setIsAskAIOpen(false);
+          // Pass captured state explicitly to avoid stale closures
+          applyAIResult(data.result, mode, currentContextType, currentSelectedBlocks);
+        },
+        onError: (error) => {
+          logger.error({ msg: "AI Generation Failed", error });
+          showError(error.message || "Failed to generate AI content");
+        },
+      }
+    );
+  };
+
+  const [snapshotBlocks, setSnapshotBlocks] = useState<any[] | null>(null);
+
+  const applyAIResult = async (
+    result: string,
+    mode: "generate" | "rewrite" | "shorter" | "longer" | "fix-grammar" | "summarize",
+    contextType: "selection" | "document",
+    blocksToReplace: any[]
+  ) => {
+    try {
+      if (!editor) return;
+
+      // Use passed result
+      const contentToApply = result;
+      if (!contentToApply) return;
+
+      // TAKE SNAPSHOT BEFORE APPLYING CHANGES
+      // Deep clone to ensure we have a clean copy of the state
+      const currentSnapshot = JSON.parse(JSON.stringify(editor.document));
+      console.log("Creation Snapshot:", currentSnapshot);
+      setSnapshotBlocks(currentSnapshot);
+
+      if (mode === "generate") {
+        // Insert at cursor or append
+        const currentBlock = editor.getTextCursorPosition().block;
+        if (currentBlock) {
+          const newBlocks = await editor.tryParseMarkdownToBlocks(contentToApply);
+          editor.insertBlocks(newBlocks, currentBlock, "after");
+        } else {
+          const blocks = await editor.tryParseMarkdownToBlocks(contentToApply);
+          // Safe append
+          const lastBlock = editor.document[editor.document.length - 1];
+          if (lastBlock) {
+            editor.insertBlocks(blocks, lastBlock, "after");
+          } else {
+            editor.replaceBlocks(editor.document, blocks);
+          }
+        }
+      } else {
+        // REWRITE / FIX GRAMMAR / SUMMARIZE -> REPLACE
+        const newBlocks = await editor.tryParseMarkdownToBlocks(contentToApply);
+
+        if (contextType === "selection" && blocksToReplace.length > 0) {
+          editor.replaceBlocks(blocksToReplace, newBlocks);
+        } else if (contextType === "document") {
+          editor.replaceBlocks(editor.document, newBlocks);
+        } else {
+          // Fallback: insert
+          const currentBlock = editor.getTextCursorPosition().block;
+          if (currentBlock) {
+            editor.insertBlocks(newBlocks, currentBlock, "after");
+          }
+        }
+      }
+
+      setIsReviewingAI(true);
+      success("AI content applied. Review changes below.");
+    } catch (error) {
+      logger.error({ msg: "Failed to apply AI result", error });
+      showError("Failed to apply AI changes");
+    }
+  };
+
+  const handleDiscardAI = () => {
+    if (editor && snapshotBlocks !== null) {
+      // Restore from snapshot
+      logger.info({ msg: "Discarding AI changes, restoring snapshot", blocks: snapshotBlocks.length });
+      editor.replaceBlocks(editor.document, snapshotBlocks);
+      setSnapshotBlocks(null); // Clear snapshot
+    } else {
+      // Fallback if no snapshot available
+      logger.warn({ msg: "No snapshot available for discard" });
+      if (editor) {
+        // Try generic undo as last resort
+        // @ts-ignore
+        const tiptap = editor._tiptapEditor as any;
+        if (tiptap?.commands?.undo) tiptap.commands.undo();
+      }
+    }
+    setIsReviewingAI(false);
+  };
+
   if (isLoadingNote) {
     return (
       <div className="flex h-screen bg-[#0d1117] items-center justify-center">
@@ -506,6 +673,19 @@ function Editor() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Ask AI Button */}
+            <div className="relative mr-2">
+              <Button
+                onClick={handleAskAI}
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2 bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all font-medium rounded-full px-4"
+              >
+                <AutoAwesomeRoundedIcon sx={{ fontSize: 16 }} />
+                Ask AI
+              </Button>
+            </div>
+
             {/* Only show Share button for owned notes (where user ID matches creator) */}
             {noteData?.userId === profileData?.data?.user?._id && (
               <button
@@ -900,7 +1080,59 @@ function Editor() {
           {/* Bottom spacer */}
           <div className="h-10"></div>
         </div>
+        {/* AI Review Bar */}
+        {isReviewingAI && (
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-1.5 bg-[#1e293b] border border-white/10 rounded-full shadow-2xl animate-in slide-in-from-bottom-5">
+            <div className="px-3 text-xs font-medium text-emerald-400 flex items-center gap-2">
+              <AutoAwesomeRoundedIcon sx={{ fontSize: 14 }} />
+              <span>AI Changes Applied</span>
+            </div>
+            <div className="h-4 w-px bg-white/10" />
+            <button
+              onClick={handleDiscardAI}
+              className="px-3 py-1.5 rounded-full text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              Discard
+            </button>
+            <button
+              onClick={() => setIsPreviewAIOpen(true)}
+              className="px-3 py-1.5 rounded-full text-xs font-medium text-sky-400 hover:bg-sky-500/10 transition-colors"
+            >
+              Diff View
+            </button>
+            <button
+              onClick={() => setIsReviewingAI(false)}
+              className="px-3 py-1.5 rounded-full text-xs font-medium text-white bg-emerald-500 hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+            >
+              Keep
+            </button>
+          </div>
+        )}
       </main>
+
+      {/* AI Modals */}
+      <AskAIModal
+        isOpen={isAskAIOpen}
+        onClose={() => setIsAskAIOpen(false)}
+        onGenerate={handleGenerateAI}
+        isGenerating={isGeneratingAI}
+        hasSelection={!!aiContext} // Allow rewrite/fix if ANY context exists (selection or full doc)
+      />
+
+      <AIPreviewModal
+        isOpen={isPreviewAIOpen}
+        onClose={() => {
+          handleDiscardAI();
+          setIsPreviewAIOpen(false);
+        }}
+        onAccept={() => {
+          setIsPreviewAIOpen(false);
+          // Changes are already applied, just close modal
+        }}
+        originalText={aiContext}
+        generatedText={aiResult}
+        isReplacing={aiMode !== "generate"}
+      />
 
     </div >
   );

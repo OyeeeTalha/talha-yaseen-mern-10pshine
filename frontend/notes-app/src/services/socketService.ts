@@ -163,7 +163,7 @@ class SocketService {
   // Synchronous save using Beacon API for page unload scenarios
   saveSync(payload: AutosavePayload) {
     const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
-    const url = `${API_URL}/api/notes/update-note/${payload.noteId}`;
+    const url = `${API_URL}/notes/update-note/${payload.noteId}`;
 
     const data = {
       title: payload.title,
