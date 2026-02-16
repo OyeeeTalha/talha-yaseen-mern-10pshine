@@ -13,6 +13,8 @@ import noteRoutes from "./features/notes/routes.js";
 import userRoutes from "./features/user/routes.js";
 
 import contactRoutes from "./features/contact/routes.js";
+
+import aiHelperRoutes from "./features/ai-helper/routes.js";
 import * as timers from "./config/timers.config.js";
 
 const app: Application = express();
@@ -62,6 +64,7 @@ app.use("/user", userRoutes);
 
 app.use("/", contactRoutes);
 
+app.use("/ai", aiHelperRoutes);
 
 
 app.get("/config", (req, res) => {
